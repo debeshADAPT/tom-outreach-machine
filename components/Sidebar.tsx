@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { logout } from '@/app/actions/auth'
 
 const navItems = [
   { label: 'Dashboard', href: '/' },
@@ -13,6 +14,8 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+
+  if (pathname === '/login') return null
 
   return (
     <aside
@@ -27,7 +30,7 @@ export default function Sidebar() {
         />
       </div>
 
-      <nav className="flex flex-col gap-1 px-3 mt-2">
+      <nav className="flex flex-col gap-1 px-3 mt-2 flex-1">
         {navItems.map(({ label, href }) => {
           const active = pathname === href
           return (
@@ -46,6 +49,18 @@ export default function Sidebar() {
           )
         })}
       </nav>
+
+      <div className="px-3 pb-6">
+        <form action={logout}>
+          <button
+            type="submit"
+            className="w-full px-3 py-2 rounded-md text-sm font-medium text-left transition-colors hover:bg-white/10"
+            style={{ color: '#a3a3a3' }}
+          >
+            Sign Out
+          </button>
+        </form>
+      </div>
     </aside>
   )
 }
