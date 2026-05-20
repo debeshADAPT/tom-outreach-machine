@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (
-    pathname === '/login' ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.')
@@ -13,9 +12,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const authCookie = request.cookies.getAll().find(c => c.name.includes('auth-token'))
+  const hasSession = request.cookies.getAll().some(c => c.name.includes('auth-token'))
 
-  if (!authCookie) {
+  if (pathname === '/login') {
+    return hasSession
+      ? NextResponse.redirect(new URL('/', request.url))
+      : NextResponse.next()
+  }
+
+  if (!hasSession) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
