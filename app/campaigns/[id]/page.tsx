@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createSupabaseServer } from '@/lib/supabase-server'
 import type { Campaign, Prospect } from '@/lib/types'
@@ -33,6 +34,17 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3' }}>
       <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E5E5', padding: '24px 32px 0 32px' }}>
+        <Link
+          href="/campaigns"
+          className="hover:text-[#6B7280] transition-colors"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            fontSize: '13px', color: '#9CA3AF', textDecoration: 'none',
+            marginBottom: '8px',
+          }}
+        >
+          ← My Campaigns
+        </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>
             {c.name}
