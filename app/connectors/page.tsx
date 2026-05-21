@@ -1,7 +1,7 @@
 export default function ConnectorsPage() {
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold text-white">Connectors</h1>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3', padding: '32px' }}>
+      <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0D0D0D' }}>Connectors</h1>
     </div>
   )
 }
