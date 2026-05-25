@@ -14,9 +14,14 @@ export async function createSupabaseServer() {
         return cookieStore.getAll()
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) =>
-          cookieStore.set(name, value, options)
-        )
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        } catch {
+          // Called from a Server Component during render — safe to ignore.
+          // Supabase will refresh the session on the next server action.
+        }
       },
     },
   })

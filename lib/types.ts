@@ -8,6 +8,8 @@ export interface Campaign {
   event_brief: string | null
   status: 'draft' | 'active' | 'completed'
   created_at: string
+  sequence_delays?: Record<string, number> | null
+  email_templates?: Record<string, { subject: string; body: string }> | null
 }
 
 export interface CampaignWithStats extends Campaign {
@@ -22,8 +24,15 @@ export interface Prospect {
   company: string | null
   industry: string | null
   email: string | null
+  title: string | null
+  annual_revenue: string | null
+  org_size: string | null
   history_tags: string[] | null
   sequence_step: string
   status: 'queued' | 'sent' | 'replied' | 'bounced' | 'unsubscribed'
+  paused: boolean
+  sent_at: string | null
+  custom_emails: Record<string, { subject: string; body: string }> | null
+  custom_delays: Record<string, number> | null
   created_at: string
 }

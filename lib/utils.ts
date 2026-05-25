@@ -45,6 +45,10 @@ const STEP_LABELS: Record<string, string> = {
   follow_up_1: 'Follow-up 1',
   follow_up_2: 'Follow-up 2',
   follow_up_3: 'Follow-up 3',
+  followup_1: 'Follow-up 1',
+  followup_2: 'Follow-up 2',
+  followup_3: 'Follow-up 3',
+  final: 'Final',
   final_follow_up: 'Final follow-up',
 }
 

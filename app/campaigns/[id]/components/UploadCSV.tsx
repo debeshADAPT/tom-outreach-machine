@@ -8,6 +8,9 @@ interface ParsedRow {
   company: string | null
   industry: string | null
   email: string | null
+  title: string | null
+  annual_revenue: string | null
+  org_size: string | null
 }
 
 type Stage = 'idle' | 'sf-confirm' | 'checking' | 'dupe-warning' | 'uploading' | 'done'
@@ -58,12 +61,21 @@ function mapRow(row: Record<string, string>): ParsedRow {
     row['company'] || row['account name'] || row['account_name'] || row['organization'] || null
   const industry =
     row['industry'] || null
+  const title =
+    row['title'] || row['job title'] || row['jobtitle'] || row['role'] || null
+  const annual_revenue =
+    row['annual revenue'] || row['revenue'] || row['annual_revenue'] || null
+  const org_size =
+    row['org size'] || row['company size'] || row['employees'] || row['org_size'] || null
 
   return {
     full_name: fullName || null,
     company: company || null,
     industry: industry || null,
     email: email || null,
+    title: title || null,
+    annual_revenue: annual_revenue || null,
+    org_size: org_size || null,
   }
 }
 
@@ -175,8 +187,7 @@ export default function UploadCSV({ campaignId }: Props) {
           lineHeight: '1.5', maxWidth: '300px',
         }}>
           Must include an <strong style={{ fontWeight: '600' }}>email</strong> column.
-          Recommended: first name, last name (or full name), company, industry.
-          Extra columns are ignored.
+          Recommended: name, company, industry, title, org size.
         </p>
       </div>
     )

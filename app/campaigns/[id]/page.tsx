@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createSupabaseServer } from '@/lib/supabase-server'
@@ -19,16 +20,11 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
   const { tab = 'overview' } = await searchParams
 
   const supabase = await createSupabaseServer()
-
-  const [{ data: campaign }, { data: prospects }] = await Promise.all([
-    supabase.from('campaigns').select('*').eq('id', id).single(),
-    supabase.from('prospects').select('*').eq('campaign_id', id).order('created_at', { ascending: true }),
-  ])
+  const { data: campaign } = await supabase.from('campaigns').select('*').eq('id', id).single()
 
   if (!campaign) notFound()
 
   const c = campaign as Campaign
-  const p = (prospects ?? []) as Prospect[]
   const badge = campaignStatusBadge(c.status)
 
   return (
@@ -60,11 +56,38 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
       </div>
 
       <div style={{ padding: '28px 32px' }}>
-        {tab === 'overview' && <OverviewTab campaign={c} prospects={p} />}
-        {tab === 'prospects' && <ProspectsTab campaignId={id} prospects={p} />}
-        {tab === 'sequence' && <SequenceTab />}
-        {tab === 'settings' && <SettingsTab campaign={c} />}
+        <Suspense fallback={
+          <div className="relative min-h-64 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-4 border-[#E5E5E5] border-t-[#E7534F] animate-spin" />
+          </div>
+        }>
+          <TabContent campaignId={id} tab={tab} campaign={c} />
+        </Suspense>
       </div>
     </div>
+  )
+}
+
+async function TabContent({
+  campaignId, tab, campaign,
+}: {
+  campaignId: string; tab: string; campaign: Campaign
+}) {
+  const supabase = await createSupabaseServer()
+  const { data: prospects } = await supabase
+    .from('prospects')
+    .select('*')
+    .eq('campaign_id', campaignId)
+    .order('created_at', { ascending: true })
+
+  const p = (prospects ?? []) as Prospect[]
+
+  return (
+    <>
+      {tab === 'overview'  && <OverviewTab campaign={campaign} prospects={p} />}
+      {tab === 'prospects' && <ProspectsTab campaign={campaign} prospects={p} />}
+      {tab === 'sequence'  && <SequenceTab prospects={p} campaign={campaign} />}
+      {tab === 'settings'  && <SettingsTab campaign={campaign} />}
+    </>
   )
 }
