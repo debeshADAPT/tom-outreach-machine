@@ -64,6 +64,14 @@ function IconChevronLeft() {
   )
 }
 
+function IconSignOut() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" style={{ flexShrink: 0 }}>
+      <path fillRule="evenodd" d="M3 3a1 1 0 011-1h8a1 1 0 010 2H5v12h7a1 1 0 010 2H4a1 1 0 01-1-1V3zm12.293 4.293a1 1 0 011.414 1.414L14.414 11H9a1 1 0 010-2h5.414l-1.707-1.707a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface RecentCampaign {
@@ -115,6 +123,12 @@ export default function Sidebar() {
   }, [pathname])
 
   if (pathname === '/login') return null
+
+  async function handleSignOut() {
+    const supabase = createSupabaseBrowser()
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
 
   function toggleCollapse() {
     const next = !collapsed
@@ -325,8 +339,30 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Collapse toggle */}
-      <div className="px-2 pb-5">
+      {/* Footer: Sign Out + Collapse toggle */}
+      <div className="px-2 pb-5" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {/* Sign Out */}
+        <button
+          onClick={handleSignOut}
+          title="Sign out"
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: collapsed ? 0 : '10px',
+            padding: collapsed ? '8px' : '8px 10px',
+            border: 'none', borderRadius: '6px',
+            backgroundColor: 'transparent', color: '#6B7280',
+            cursor: 'pointer', fontSize: '14px', fontWeight: '500',
+            overflow: 'hidden', whiteSpace: 'nowrap',
+            transition: 'background-color 0.15s, color 0.15s',
+          }}
+          className="hover:bg-[#F3F3F1] hover:text-[#0D0D0D]"
+        >
+          <IconSignOut />
+          {!collapsed && <span>Sign Out</span>}
+        </button>
+
+        {/* Collapse toggle */}
         <button
           onClick={toggleCollapse}
           style={{
