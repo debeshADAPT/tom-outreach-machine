@@ -60,9 +60,9 @@ function seededHash(str: string): number {
 
 function nextWorkday(date: Date): Date {
   const d = new Date(date)
-  const dow = d.getDay()
-  if (dow === 0) d.setDate(d.getDate() + 1)
-  if (dow === 6) d.setDate(d.getDate() - 1)
+  const dow = d.getUTCDay()
+  if (dow === 0) d.setUTCDate(d.getUTCDate() + 1)
+  if (dow === 6) d.setUTCDate(d.getUTCDate() - 1)
   return d
 }
 
@@ -83,10 +83,10 @@ function generateMockLogs(prospects: Prospect[], campaign: Campaign): EmailLog[]
     for (let d = 0; d <= currentDepth; d++) {
       const step = STEP_ORDER_LOG[d]
       const sentDate = new Date(base)
-      sentDate.setDate(sentDate.getDate() + STEP_DAY_OFFSETS[d])
-      sentDate.setHours(8 + ((hash + d * 7) % 8))
-      sentDate.setMinutes((hash + d * 13) % 60)
-      sentDate.setSeconds(0)
+      sentDate.setUTCDate(sentDate.getUTCDate() + STEP_DAY_OFFSETS[d])
+      sentDate.setUTCHours(8 + ((hash + d * 7) % 8))
+      sentDate.setUTCMinutes((hash + d * 13) % 60)
+      sentDate.setUTCSeconds(0)
 
       const workday = nextWorkday(sentDate)
 
@@ -115,11 +115,11 @@ function generateMockLogs(prospects: Prospect[], campaign: Campaign): EmailLog[]
 }
 
 function formatLogDate(d: Date): { date: string; time: string } {
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const yy = String(d.getFullYear()).slice(-2)
-  const hh = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
+  const dd = String(d.getUTCDate()).padStart(2, '0')
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const yy = String(d.getUTCFullYear()).slice(-2)
+  const hh = String(d.getUTCHours()).padStart(2, '0')
+  const min = String(d.getUTCMinutes()).padStart(2, '0')
   return { date: `${dd}/${mm}/${yy}`, time: `${hh}:${min}` }
 }
 
