@@ -17,8 +17,9 @@ import {
   saveProspectCustomDelay,
 } from '../actions'
 import type { Prospect, Campaign } from '@/lib/types'
-import { prospectStatusBadge } from '@/lib/utils'
+import { prospectStatusBadge, calculateStepDates, formatDDMMYY } from '@/lib/utils'
 import { STEPS, STEP_ORDER, STEP_DEPTH, type StepKey } from '@/lib/sequence-steps'
+import ProspectDrawer from './ProspectDrawer'
 
 interface Props {
   prospects: Prospect[]
@@ -70,17 +71,6 @@ const FontSize = Extension.create({
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function sortActive(list: Prospect[]): Prospect[] {
-  return [...list].sort((a, b) => {
-    if (a.status === 'replied' && b.status !== 'replied') return -1
-    if (b.status === 'replied' && a.status !== 'replied') return 1
-    const aD = STEP_DEPTH[a.sequence_step] ?? -1
-    const bD = STEP_DEPTH[b.sequence_step] ?? -1
-    if (aD !== bD) return bD - aD
-    return (a.full_name ?? '').localeCompare(b.full_name ?? '')
-  })
-}
 
 function computeStepOffsets(delays: Record<string, number>): Record<string, number> {
   const d0 = delays['invite_to_followup1'] ?? DEFAULT_DELAYS['invite_to_followup1']
@@ -229,216 +219,94 @@ function DayGapBox({ value, isCustom, onChange }: {
 
 function StepPills({
   prospect,
-  campaignDelays,
+  campaign,
   onPillClick,
-  onMoveToStep,
   onDelayChange,
-  campaignCreatedAt,
 }: {
   prospect: Prospect
-  campaignDelays: Record<string, number>
+  campaign: Campaign
   onPillClick: (p: Prospect, stepKey: string) => void
-  onMoveToStep: (id: string, step: string) => void
   onDelayChange: (prospectId: string, gapKey: string, value: number) => void
-  campaignCreatedAt: string
 }) {
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
-
-  useEffect(() => {
-    if (!dropdownOpen) return
-    const close = () => setDropdownOpen(false)
-    window.addEventListener('scroll', close, true)
-    return () => window.removeEventListener('scroll', close, true)
-  }, [dropdownOpen])
-
   const currentIdx = STEP_ORDER.indexOf(prospect.sequence_step as StepKey)
   const prospectCustomDelays = prospect.custom_delays ?? {}
 
-  // Effective delays: prospect overrides > campaign > defaults
   const effectiveDelays: Record<string, number> = {}
   for (const key of DELAY_GAP_KEYS) {
-    effectiveDelays[key] = prospectCustomDelays[key] ?? campaignDelays[key] ?? DEFAULT_DELAYS[key]
+    effectiveDelays[key] = prospectCustomDelays[key] ?? (campaign.sequence_delays ?? {})[key] ?? DEFAULT_DELAYS[key]
   }
 
-  const stepOffsets = computeStepOffsets(effectiveDelays)
+  const stepDates = calculateStepDates(prospect, campaign)
   const today = new Date()
 
   function getPillDate(stepKey: string, stepIdx: number): { text: string; color: string } {
-    const base = new Date(campaignCreatedAt)
-    const offset = stepOffsets[stepKey] ?? 0
-    const scheduled = new Date(base)
-    scheduled.setDate(scheduled.getDate() + offset)
-    const isToday = scheduled.toDateString() === today.toDateString()
-
-    if (stepIdx < currentIdx) {
-      return { text: formatShortDate(scheduled), color: '#9CA3AF' }
-    } else if (stepIdx === currentIdx) {
-      return { text: isToday ? 'Today' : formatShortDate(scheduled), color: '#E7534F' }
-    } else {
-      return { text: formatShortDate(scheduled), color: '#9CA3AF' }
+    const d = stepDates[stepKey]
+    if (!d) return { text: '', color: '#9CA3AF' }
+    const isToday = d.toDateString() === today.toDateString()
+    const formatted = formatDDMMYY(d)
+    if (stepIdx === currentIdx) {
+      return { text: isToday ? 'Today' : formatted, color: '#E7534F' }
     }
-  }
-
-  function openDropdown(e: React.MouseEvent) {
-    e.stopPropagation()
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setDropdownPos({ top: rect.bottom + 4, left: rect.left })
-    setDropdownOpen(o => !o)
+    return { text: formatted, color: '#9CA3AF' }
   }
 
   return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', rowGap: '8px' }}>
-        {STEP_ORDER.map((stepKey, i) => {
-          const isCompleted = i < currentIdx
-          const isCurrent = i === currentIdx
-          const stepName = STEPS.find(s => s.key === stepKey)?.name ?? stepKey
-          const hasCustom = !!(prospect.custom_emails?.[stepKey])
-          const pillDate = getPillDate(stepKey, i)
-          const gapKey = DELAY_GAP_KEYS[i]
-          const isGapCustom = gapKey != null && prospectCustomDelays[gapKey] != null
+    <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', rowGap: '8px' }}>
+      {STEP_ORDER.map((stepKey, i) => {
+        const isCompleted = i < currentIdx
+        const isCurrent   = i === currentIdx
+        const stepName    = STEPS.find(s => s.key === stepKey)?.name ?? stepKey
+        const hasCustom   = !!(prospect.custom_emails?.[stepKey])
+        const pillDate    = getPillDate(stepKey, i)
+        const gapKey      = DELAY_GAP_KEYS[i]
+        const isGapCustom = gapKey != null && prospectCustomDelays[gapKey] != null
 
-          return (
-            <div key={stepKey} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
-              {/* Pill + date stacked */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                {isCurrent ? (
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    height: '32px', borderRadius: '20px',
-                    backgroundColor: '#E7534F', border: '1px solid #E7534F',
-                    overflow: 'hidden', flexShrink: 0,
-                  }}>
-                    <button
-                      onClick={() => onPillClick(prospect, stepKey)}
-                      style={{
-                        height: '100%', padding: '0 12px 0 14px',
-                        backgroundColor: 'transparent', border: 'none',
-                        color: '#FFFFFF', fontSize: '13px', fontWeight: '600',
-                        cursor: 'pointer', whiteSpace: 'nowrap',
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                      }}
-                    >
-                      {stepName}
-                      {hasCustom && (
-                        <span style={{
-                          padding: '1px 5px', borderRadius: '10px',
-                          backgroundColor: 'rgba(255,255,255,0.25)',
-                          fontSize: '10px', fontWeight: '400',
-                        }}>
-                          ✎
-                        </span>
-                      )}
-                    </button>
-                    <div style={{ width: '1px', height: '60%', backgroundColor: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
-                    <button
-                      onClick={openDropdown}
-                      style={{
-                        height: '100%', padding: '0 10px',
-                        backgroundColor: 'transparent', border: 'none',
-                        color: '#FFFFFF', fontSize: '10px',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center',
-                      }}
-                    >
-                      ▾
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => onPillClick(prospect, stepKey)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      height: '32px', padding: '0 14px', borderRadius: '20px',
-                      border: '1px solid #E5E5E5',
-                      backgroundColor: isCompleted ? '#FFFFFF' : '#F7F6F3',
-                      color: isCompleted ? '#6B7280' : '#9CA3AF',
-                      fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {isCompleted && <span style={{ fontSize: '10px' }}>✓</span>}
-                    {stepName}
-                    {hasCustom && (
-                      <span style={{
-                        padding: '1px 5px', borderRadius: '10px',
-                        backgroundColor: '#F3F3F1', color: '#9CA3AF',
-                        fontSize: '10px',
-                      }}>
-                        ✎
-                      </span>
-                    )}
-                  </button>
-                )}
-                {/* Date below pill */}
-                <span style={{ fontSize: '10px', color: pillDate.color, whiteSpace: 'nowrap' }}>
-                  {pillDate.text}
-                </span>
-              </div>
-
-              {/* Gap connector between pills */}
-              {i < STEP_ORDER.length - 1 && (
-                <div style={{ marginTop: '8px' }}>
-                  <DayGapBox
-                    value={effectiveDelays[gapKey] ?? DEFAULT_DELAYS[gapKey] ?? 3}
-                    isCustom={isGapCustom}
-                    onChange={v => onDelayChange(prospect.id, gapKey, v)}
-                  />
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {mounted && dropdownOpen && createPortal(
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-            onClick={() => setDropdownOpen(false)}
-          />
-          <div style={{
-            position: 'fixed',
-            top: dropdownPos.top,
-            left: dropdownPos.left,
-            zIndex: 100,
-            backgroundColor: '#FFFFFF',
-            border: '0.5px solid #E5E5E5',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            minWidth: '160px',
-            overflow: 'hidden',
-          }}>
-            <p style={{
-              fontSize: '10px', color: '#9CA3AF', padding: '8px 12px 4px',
-              margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '600',
-            }}>
-              Move to step
-            </p>
-            {STEP_ORDER.map(s => (
+        return (
+          <div key={stepKey} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
               <button
-                key={s}
-                onClick={() => { onMoveToStep(prospect.id, s); setDropdownOpen(false) }}
+                onClick={() => onPillClick(prospect, stepKey)}
                 style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '9px 14px', fontSize: '14px',
-                  color: s === prospect.sequence_step ? '#E7534F' : '#0D0D0D',
-                  fontWeight: s === prospect.sequence_step ? '600' : '400',
-                  backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  height: '30px', padding: '0 14px', borderRadius: '999px',
+                  border: `1.5px solid ${isCurrent ? '#E7534F' : '#E5E5E5'}`,
+                  backgroundColor: isCurrent ? '#E7534F' : isCompleted ? '#FFFFFF' : '#F7F6F3',
+                  color: isCurrent ? '#FFFFFF' : isCompleted ? '#6B7280' : '#9CA3AF',
+                  fontSize: '12px', fontWeight: '500',
+                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F6F3')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                {STEPS.find(st => st.key === s)?.name ?? s}
+                {isCompleted && <span style={{ fontSize: '10px' }}>✓</span>}
+                {stepName}
+                {hasCustom && (
+                  <span style={{
+                    padding: '1px 5px', borderRadius: '10px',
+                    backgroundColor: isCurrent ? 'rgba(255,255,255,0.25)' : '#F3F3F1',
+                    color: isCurrent ? '#FFFFFF' : '#9CA3AF',
+                    fontSize: '10px', fontWeight: '400',
+                  }}>
+                    ✎
+                  </span>
+                )}
               </button>
-            ))}
+              <span style={{ fontSize: '10px', color: pillDate.color, whiteSpace: 'nowrap' }}>
+                {pillDate.text}
+              </span>
+            </div>
+
+            {i < STEP_ORDER.length - 1 && (
+              <div style={{ marginTop: '8px' }}>
+                <DayGapBox
+                  value={effectiveDelays[gapKey] ?? DEFAULT_DELAYS[gapKey] ?? 3}
+                  isCustom={isGapCustom}
+                  onChange={v => onDelayChange(prospect.id, gapKey, v)}
+                />
+              </div>
+            )}
           </div>
-        </>,
-        document.body
-      )}
-    </>
+        )
+      })}
+    </div>
   )
 }
 
@@ -497,7 +365,6 @@ function EmailModal({
 
   if (!step) return null
 
-  // Compute offsets using prospect's custom delays merged with campaign delays
   const prospectCustomDelays = prospect.custom_delays ?? {}
   const effectiveDelays: Record<string, number> = {}
   for (const key of DELAY_GAP_KEYS) {
@@ -551,7 +418,7 @@ function EmailModal({
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 50,
+        position: 'fixed', inset: 0, zIndex: 400,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
         padding: '24px',
@@ -896,18 +763,46 @@ function EmailModal({
   )
 }
 
+// ─── Group definitions ────────────────────────────────────────────────────────
+
+const SEQUENCE_GROUPS = [
+  { id: 'not_started', label: 'Sequence Not Started' },
+  { id: 'queued',      label: 'Queued'               },
+  { id: 'invite_1',   label: 'Invite 1'              },
+  { id: 'followup_1', label: 'Follow-up 1'           },
+  { id: 'followup_2', label: 'Follow-up 2'           },
+  { id: 'followup_3', label: 'Follow-up 3'           },
+  { id: 'final',      label: 'Final'                 },
+]
+
+function getGroupProspects(groupId: string, prospects: Prospect[]): Prospect[] {
+  switch (groupId) {
+    // Not Started = haven't entered the sequence at all (sequence_step = 'not_started', any status)
+    case 'not_started': return prospects.filter(p => p.sequence_step === 'not_started')
+    // Queued = assigned a step but email is pending send (any step except not_started, status = 'queued')
+    case 'queued':      return prospects.filter(p => p.status === 'queued' && p.sequence_step !== 'not_started')
+    // All remaining groups are purely sequence_step based, regardless of status
+    case 'invite_1':    return prospects.filter(p => p.sequence_step === 'invite_1')
+    case 'followup_1':  return prospects.filter(p => p.sequence_step === 'followup_1')
+    case 'followup_2':  return prospects.filter(p => p.sequence_step === 'followup_2')
+    case 'followup_3':  return prospects.filter(p => p.sequence_step === 'followup_3')
+    case 'final':       return prospects.filter(p => p.sequence_step === 'final')
+    default:            return []
+  }
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function SequenceTab({ prospects, campaign }: Props) {
   const [search, setSearch] = useState('')
-  const [stepFilter, setStepFilter] = useState('all')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false)
   const [modal, setModal] = useState<{ prospect: Prospect; stepKey: string } | null>(null)
   const [localOverrides, setLocalOverrides] = useState<Map<string, Partial<Prospect>>>(new Map())
   const [toast, setToast] = useState<string | null>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [drawerProspect, setDrawerProspect] = useState<Prospect | null>(null)
 
-  // Campaign-level delays as baseline for all prospects
   const campaignDelays: Record<string, number> = {
     ...DEFAULT_DELAYS,
     ...(campaign.sequence_delays ?? {}),
@@ -931,32 +826,13 @@ export default function SequenceTab({ prospects, campaign }: Props) {
     setLocalOverrides(prev => { const m = new Map(prev); m.delete(id); return m })
   }
 
-  const active = prospects
-    .filter(p => p.sequence_step !== 'not_started')
-    .map(p => getEffective(p))
-
-  const q = search.toLowerCase()
-  const filtered = sortActive(active).filter(p => {
-    if (q && !(
-      (p.full_name ?? '').toLowerCase().includes(q) ||
-      (p.company ?? '').toLowerCase().includes(q) ||
-      (p.email ?? '').toLowerCase().includes(q)
-    )) return false
-    if (stepFilter === 'all') return true
-    if (stepFilter === 'replied') return p.status === 'replied'
-    if (stepFilter === 'paused') return p.paused ?? false
-    return p.sequence_step === stepFilter
-  })
-
-  const allFilteredIds = filtered.map(p => p.id)
-  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.has(id))
-
-  function toggleSelectAll() {
-    if (allSelected) {
-      setSelectedIds(prev => { const n = new Set(prev); allFilteredIds.forEach(id => n.delete(id)); return n })
-    } else {
-      setSelectedIds(prev => new Set([...prev, ...allFilteredIds]))
-    }
+  function toggleGroupExpand(id: string) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   function toggleSelect(id: string) {
@@ -968,8 +844,10 @@ export default function SequenceTab({ prospects, campaign }: Props) {
     applyOverride(p.id, { paused: newPaused })
     try {
       await toggleProspectPaused(p.id, newPaused)
-    } catch {
+    } catch (err) {
+      console.error('Failed to toggle pause:', err)
       revertOverride(p.id)
+      showToast('Failed to update pause status')
     }
   }
 
@@ -1031,43 +909,139 @@ export default function SequenceTab({ prospects, campaign }: Props) {
     showToast(`Email saved for ${modal.prospect.full_name ?? 'prospect'}`)
   }
 
+  const allProspects = prospects.map(p => getEffective(p))
+  const q = search.toLowerCase()
+  function searchMatch(p: Prospect): boolean {
+    if (!q) return true
+    return (
+      (p.full_name ?? '').toLowerCase().includes(q) ||
+      (p.company ?? '').toLowerCase().includes(q) ||
+      (p.email ?? '').toLowerCase().includes(q)
+    )
+  }
+
+  function renderRow(p: Prospect, isLast: boolean, groupId: string) {
+    const isPaused = p.paused ?? false
+    const isReplied = p.status === 'replied'
+    const isSelected = selectedIds.has(p.id)
+    const showPause = groupId !== 'not_started'
+
+    const defaultBg = isReplied ? '#F0FDF4' : isPaused ? '#FFFBEB' : '#FFFFFF'
+    return (
+      <div
+        key={p.id}
+        onClick={() => setDrawerProspect(p)}
+        onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F7F6F3' }}
+        onMouseLeave={e => { e.currentTarget.style.backgroundColor = defaultBg }}
+        style={{
+          borderBottom: isLast ? 'none' : '1px solid #F3F3F1',
+          backgroundColor: defaultBg,
+          padding: '14px 16px',
+          overflow: 'visible',
+          cursor: 'pointer',
+          transition: 'background-color 150ms',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => toggleSelect(p.id)}
+            onClick={e => e.stopPropagation()}
+            style={{ marginTop: '2px', flexShrink: 0, accentColor: '#E7534F', cursor: 'pointer' }}
+          />
+
+          <div style={{ width: '220px', flexShrink: 0 }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#0D0D0D', lineHeight: 1.3 }}>
+              {p.full_name ?? '—'}
+            </div>
+            {p.company && (
+              <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                {p.company}
+              </div>
+            )}
+            {p.email && (
+              <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '1px' }}>
+                {p.email}
+              </div>
+            )}
+            {p.history_tags && p.history_tags.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                <HistoryTags tags={p.history_tags} />
+              </div>
+            )}
+          </div>
+
+          <div onClick={e => e.stopPropagation()} style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '12px', minWidth: 0, overflow: 'visible' }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'visible' }}>
+              <StepPills
+                prospect={p}
+                campaign={campaign}
+                onPillClick={(pr, sk) => setModal({ prospect: pr, stepKey: sk })}
+                onDelayChange={handleDelayChange}
+              />
+            </div>
+
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+              {showPause && (
+                <button
+                  onClick={e => { e.stopPropagation(); handlePauseToggle(p) }}
+                  title={isPaused ? 'Resume' : 'Pause'}
+                  style={{
+                    padding: '4px 10px', border: '1px solid #E5E5E5', borderRadius: '6px',
+                    backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '13px',
+                    cursor: 'pointer', flexShrink: 0,
+                  }}
+                >
+                  {isPaused ? '▶' : '⏸'}
+                </button>
+              )}
+              {isReplied && (
+                <span style={{
+                  padding: '2px 8px', borderRadius: '20px', fontSize: '11px',
+                  fontWeight: '600', backgroundColor: '#DCFCE7', color: '#166534',
+                }}>
+                  Replied ✓
+                </span>
+              )}
+              {isPaused && (
+                <span style={{
+                  padding: '2px 8px', borderRadius: '20px', fontSize: '11px',
+                  fontWeight: '600', backgroundColor: '#FEF3C7', color: '#92400E',
+                }}>
+                  Paused
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const hasSel = selectedIds.size > 0
+  const activeCount = allProspects.filter(p => p.sequence_step !== 'not_started').length
 
   return (
     <div>
       <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px' }}>
-        {active.length} active sequence{active.length !== 1 ? 's' : ''}
+        {activeCount} active sequence{activeCount !== 1 ? 's' : ''}
       </p>
 
-      {/* Toolbar */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+      {/* Search */}
+      <div style={{ marginBottom: '12px' }}>
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by name, company or email…"
           style={{
-            flex: '1', minWidth: '220px', padding: '8px 12px',
+            width: '100%', padding: '8px 12px',
             border: '1px solid #E5E5E5', borderRadius: '8px',
-            fontSize: '13px', color: '#0D0D0D', outline: 'none', backgroundColor: '#FFFFFF',
+            fontSize: '13px', color: '#0D0D0D', outline: 'none',
+            backgroundColor: '#FFFFFF', boxSizing: 'border-box',
           }}
         />
-        <select
-          value={stepFilter}
-          onChange={e => setStepFilter(e.target.value)}
-          style={{
-            padding: '8px 12px', border: '1px solid #E5E5E5', borderRadius: '8px',
-            fontSize: '13px', color: '#0D0D0D', backgroundColor: '#FFFFFF',
-            cursor: 'pointer', outline: 'none',
-          }}
-        >
-          <option value="all">All Steps</option>
-          {STEP_ORDER.map(k => (
-            <option key={k} value={k}>{STEPS.find(s => s.key === k)?.name ?? k}</option>
-          ))}
-          <option value="replied">Replied</option>
-          <option value="paused">Paused</option>
-        </select>
       </div>
 
       {/* Bulk action bar */}
@@ -1139,141 +1113,96 @@ export default function SequenceTab({ prospects, campaign }: Props) {
         </div>
       )}
 
-      {/* Empty states */}
-      {active.length === 0 ? (
+      {/* Empty campaign state */}
+      {prospects.length === 0 ? (
         <div style={{
           backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
           borderRadius: '10px', padding: '60px 24px', textAlign: 'center',
         }}>
           <p style={{ fontSize: '15px', fontWeight: '600', color: '#0D0D0D', marginBottom: '8px' }}>
-            No active sequences yet.
+            No prospects yet.
           </p>
           <p style={{ fontSize: '13px', color: '#6B7280' }}>
-            Go to the Prospects tab and press &ldquo;Start Sequence&rdquo; to begin.
+            Import prospects from the Prospects tab to get started.
           </p>
         </div>
-      ) : filtered.length === 0 ? (
-        <div style={{
-          backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
-          borderRadius: '10px', padding: '40px 24px', textAlign: 'center',
-        }}>
-          <p style={{ fontSize: '14px', color: '#6B7280' }}>No prospects match this filter.</p>
-        </div>
       ) : (
-        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: '10px', overflow: 'visible' }}>
-          {/* Table header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', padding: '10px 16px',
-            borderBottom: '1px solid #E5E5E5', backgroundColor: '#FAFAFA',
-            borderRadius: '10px 10px 0 0',
-          }}>
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={toggleSelectAll}
-              style={{ marginRight: '12px', accentColor: '#E7534F', cursor: 'pointer' }}
-            />
-            <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Prospect
-            </span>
-          </div>
+        /* Grouped sections */
+        SEQUENCE_GROUPS.map(group => {
+          const groupProspects = getGroupProspects(group.id, allProspects)
+          const filteredProspects = groupProspects.filter(searchMatch)
+          const repliedCount = groupProspects.filter(p => p.status === 'replied').length
+          const isEmpty = groupProspects.length === 0
+          const isExpanded = expandedGroups.has(group.id)
 
-          {/* Prospect rows */}
-          {filtered.map((p, i) => {
-            const isPaused = p.paused ?? false
-            const isReplied = p.status === 'replied'
-            const isLast = i === filtered.length - 1
-
-            return (
+          return (
+            <div key={group.id}>
+              {/* Section header */}
               <div
-                key={p.id}
+                onClick={isEmpty ? undefined : () => toggleGroupExpand(group.id)}
+                onMouseEnter={isEmpty ? undefined : e => { e.currentTarget.style.backgroundColor = '#F7F6F3' }}
+                onMouseLeave={isEmpty ? undefined : e => { e.currentTarget.style.backgroundColor = '#FFFFFF' }}
                 style={{
-                  borderBottom: isLast ? 'none' : '1px solid #F3F3F1',
-                  backgroundColor: isReplied ? '#F0FDF4' : isPaused ? '#FFFBEB' : '#FFFFFF',
-                  padding: '14px 16px',
-                  overflow: 'visible',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '14px 16px', backgroundColor: '#FFFFFF',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: isExpanded ? '8px 8px 0 0' : '8px',
+                  cursor: isEmpty ? 'default' : 'pointer',
+                  opacity: isEmpty ? 0.4 : 1,
+                  marginBottom: isExpanded ? '0' : '8px',
+                  userSelect: 'none',
                 }}
               >
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  {/* Checkbox */}
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(p.id)}
-                    onChange={() => toggleSelect(p.id)}
-                    style={{ marginTop: '2px', flexShrink: 0, accentColor: '#E7534F', cursor: 'pointer' }}
-                  />
-
-                  {/* Left column: name / company / email / tags */}
-                  <div style={{ width: '220px', flexShrink: 0 }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#0D0D0D', lineHeight: 1.3 }}>
-                      {p.full_name ?? '—'}
-                    </div>
-                    {p.company && (
-                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                        {p.company}
-                      </div>
-                    )}
-                    {p.email && (
-                      <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '1px' }}>
-                        {p.email}
-                      </div>
-                    )}
-                    {p.history_tags && p.history_tags.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                        <HistoryTags tags={p.history_tags} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right column: step pills + pause button */}
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '12px', minWidth: 0, overflow: 'visible' }}>
-                    <div style={{ flex: 1, minWidth: 0, overflow: 'visible' }}>
-                      <StepPills
-                        prospect={p}
-                        campaignDelays={campaignDelays}
-                        onPillClick={(pr, sk) => setModal({ prospect: pr, stepKey: sk })}
-                        onMoveToStep={handleMoveToStep}
-                        onDelayChange={handleDelayChange}
-                        campaignCreatedAt={campaign.created_at}
-                      />
-                    </div>
-
-                    {/* Status badges + pause button */}
-                    <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                      <button
-                        onClick={() => handlePauseToggle(p)}
-                        title={isPaused ? 'Resume' : 'Pause'}
-                        style={{
-                          padding: '4px 10px', border: '1px solid #E5E5E5', borderRadius: '6px',
-                          backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '13px',
-                          cursor: 'pointer', flexShrink: 0,
-                        }}
-                      >
-                        {isPaused ? '▶' : '⏸'}
-                      </button>
-                      {isReplied && (
-                        <span style={{
-                          padding: '2px 8px', borderRadius: '20px', fontSize: '11px',
-                          fontWeight: '600', backgroundColor: '#DCFCE7', color: '#166534',
-                        }}>
-                          Replied ✓
-                        </span>
-                      )}
-                      {isPaused && (
-                        <span style={{
-                          padding: '2px 8px', borderRadius: '20px', fontSize: '11px',
-                          fontWeight: '600', backgroundColor: '#FEF3C7', color: '#92400E',
-                        }}>
-                          Paused
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                {!isEmpty && (
+                  <span style={{
+                    fontSize: '10px', color: '#9CA3AF', flexShrink: 0,
+                    display: 'inline-block', lineHeight: 1,
+                    transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                    transition: 'transform 200ms ease',
+                  }}>
+                    ▶
+                  </span>
+                )}
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#0D0D0D' }}>
+                  {group.label}
+                </span>
+                <span style={{
+                  padding: '2px 8px', borderRadius: '20px', fontSize: '11px',
+                  backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
+                  color: '#6B7280', flexShrink: 0,
+                }}>
+                  {groupProspects.length} prospect{groupProspects.length !== 1 ? 's' : ''}
+                </span>
+                {repliedCount > 0 && (
+                  <span style={{ fontSize: '12px', color: '#16A34A', marginLeft: 'auto', flexShrink: 0 }}>
+                    {repliedCount} replied
+                  </span>
+                )}
               </div>
-            )
-          })}
-        </div>
+
+              {/* Section content */}
+              {isExpanded && !isEmpty && (
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E5E5E5',
+                  borderTop: 'none',
+                  borderLeft: '4px solid #E7534F',
+                  borderRadius: '0 0 8px 8px',
+                  marginBottom: '8px',
+                  overflow: 'visible',
+                }}>
+                  {filteredProspects.length > 0 ? (
+                    filteredProspects.map((p, i) => renderRow(p, i === filteredProspects.length - 1, group.id))
+                  ) : (
+                    <div style={{ padding: '20px 24px', textAlign: 'center' }}>
+                      <p style={{ fontSize: '13px', color: '#9CA3AF' }}>No matches in this section.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })
       )}
 
       {/* Email modal */}
@@ -1285,6 +1214,20 @@ export default function SequenceTab({ prospects, campaign }: Props) {
           campaignDelays={campaignDelays}
           onClose={() => setModal(null)}
           onSaved={handleEmailSaved}
+        />
+      )}
+
+      {/* Prospect drawer */}
+      {drawerProspect && (
+        <ProspectDrawer
+          key={drawerProspect.id}
+          prospect={getEffective(drawerProspect)}
+          campaign={campaign}
+          onClose={() => setDrawerProspect(null)}
+          onStageChange={handleMoveToStep}
+          onOpenEmailPreview={stepKey => {
+            if (drawerProspect) setModal({ prospect: getEffective(drawerProspect), stepKey })
+          }}
         />
       )}
 

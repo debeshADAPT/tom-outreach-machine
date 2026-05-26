@@ -1,7 +1,41 @@
+import type { Prospect, Campaign } from './types'
+
 export interface StatusBadge {
   label: string
   bg: string
   color: string
+}
+
+export function formatDDMMYY(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yy = String(d.getFullYear()).slice(-2)
+  return `${dd}/${mm}/${yy}`
+}
+
+export function calculateStepDates(
+  prospect: Prospect,
+  campaign: Campaign,
+): Record<string, Date> {
+  const base = new Date(prospect.sent_at ?? campaign.created_at)
+  const cd = prospect.custom_delays ?? {}
+  const sd = campaign.sequence_delays ?? {}
+  const d0 = cd['invite_to_followup1']    ?? sd['invite_to_followup1']    ?? 3
+  const d1 = cd['followup1_to_followup2'] ?? sd['followup1_to_followup2'] ?? 4
+  const d2 = cd['followup2_to_followup3'] ?? sd['followup2_to_followup3'] ?? 3
+  const d3 = cd['followup3_to_final']     ?? sd['followup3_to_final']     ?? 7
+  function add(days: number): Date {
+    const r = new Date(base)
+    r.setDate(r.getDate() + days)
+    return r
+  }
+  return {
+    invite_1:   add(0),
+    followup_1: add(d0),
+    followup_2: add(d0 + d1),
+    followup_3: add(d0 + d1 + d2),
+    final:      add(d0 + d1 + d2 + d3),
+  }
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -32,8 +66,8 @@ export function prospectStatusBadge(status: string): StatusBadge {
       return { label: 'Replied', bg: '#DCFCE7', color: '#166534' }
     case 'bounced':
       return { label: 'Bounced', bg: '#FEE2E2', color: '#991B1B' }
-    case 'unsubscribed':
-      return { label: 'Unsubscribed', bg: '#F3F4F6', color: '#6B7280' }
+    case 'declined':
+      return { label: 'Declined', bg: '#F3F4F6', color: '#6B7280' }
     default:
       return { label: 'Queued', bg: '#F3F4F6', color: '#6B7280' }
   }

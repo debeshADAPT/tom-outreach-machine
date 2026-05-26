@@ -1,10 +1,12 @@
 import Link from 'next/link'
 
 const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'prospects', label: 'Prospects' },
-  { id: 'sequence', label: 'Sequence' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'dashboard',   label: 'Dashboard'   },
+  { id: 'ai-insights', label: 'AI Insights' },
+  { id: 'prospects',   label: 'Prospects'   },
+  { id: 'sequence',    label: 'Sequence'    },
+  { id: 'email-logs', label: 'Email Logs'  },
+  { id: 'settings',   label: 'Settings'    },
 ]
 
 interface Props {
@@ -18,7 +20,6 @@ export default function TabNav({ campaignId, activeTab }: Props) {
       backgroundColor: '#FFFFFF',
       borderBottom: '1px solid #E5E5E5',
       display: 'flex',
-      paddingLeft: '32px',
     }}>
       {TABS.map(tab => {
         const isActive = activeTab === tab.id
@@ -36,6 +37,7 @@ export default function TabNav({ campaignId, activeTab }: Props) {
               borderBottom: isActive ? '2px solid #E7534F' : '2px solid transparent',
               marginBottom: '-1px',
               transition: 'color 0.15s',
+              whiteSpace: 'nowrap',
             }}
           >
             {tab.label}

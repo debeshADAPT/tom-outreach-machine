@@ -6,9 +6,12 @@ import type { Campaign, Prospect } from '@/lib/types'
 import { campaignStatusBadge } from '@/lib/utils'
 import TabNav from './components/TabNav'
 import OverviewTab from './components/OverviewTab'
+import AIInsightsTab from './components/AIInsightsTab'
 import ProspectsTab from './components/ProspectsTab'
 import SequenceTab from './components/SequenceTab'
+import EmailLogsTab from './components/EmailLogsTab'
 import SettingsTab from './components/SettingsTab'
+import CampaignHeaderActions from './components/CampaignHeaderActions'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -17,12 +20,15 @@ interface Props {
 
 export default async function CampaignDetailPage({ params, searchParams }: Props) {
   const { id } = await params
-  const { tab = 'overview' } = await searchParams
+  const { tab = 'dashboard' } = await searchParams
 
   const supabase = await createSupabaseServer()
   const { data: campaign } = await supabase.from('campaigns').select('*').eq('id', id).single()
 
   if (!campaign) notFound()
+
+  // Update last_visited_at in the background (fire-and-forget)
+  supabase.from('campaigns').update({ last_visited_at: new Date().toISOString() }).eq('id', id)
 
   const c = campaign as Campaign
   const badge = campaignStatusBadge(c.status)
@@ -41,16 +47,21 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
         >
           ← My Campaigns
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>
-            {c.name}
-          </h1>
-          <span style={{
-            padding: '3px 10px', borderRadius: '20px', fontSize: '12px',
-            fontWeight: '500', backgroundColor: badge.bg, color: badge.color,
-          }}>
-            {badge.label}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>
+              {c.name}
+            </h1>
+            <span style={{
+              padding: '3px 10px', borderRadius: '20px', fontSize: '12px',
+              fontWeight: '500', backgroundColor: badge.bg, color: badge.color,
+            }}>
+              {badge.label}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <CampaignHeaderActions campaign={c} />
+          </div>
         </div>
         <TabNav campaignId={id} activeTab={tab} />
       </div>
@@ -84,10 +95,12 @@ async function TabContent({
 
   return (
     <>
-      {tab === 'overview'  && <OverviewTab campaign={campaign} prospects={p} />}
-      {tab === 'prospects' && <ProspectsTab campaign={campaign} prospects={p} />}
-      {tab === 'sequence'  && <SequenceTab prospects={p} campaign={campaign} />}
-      {tab === 'settings'  && <SettingsTab campaign={campaign} />}
+      {tab === 'dashboard'   && <OverviewTab campaign={campaign} prospects={p} />}
+      {tab === 'ai-insights' && <AIInsightsTab campaign={campaign} prospects={p} />}
+      {tab === 'prospects'   && <ProspectsTab campaign={campaign} prospects={p} />}
+      {tab === 'sequence'    && <SequenceTab prospects={p} campaign={campaign} />}
+      {tab === 'email-logs'  && <EmailLogsTab campaign={campaign} prospects={p} />}
+      {tab === 'settings'    && <SettingsTab campaign={campaign} />}
     </>
   )
 }

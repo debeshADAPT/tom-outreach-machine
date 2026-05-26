@@ -10,6 +10,7 @@ export interface Campaign {
   created_at: string
   sequence_delays?: Record<string, number> | null
   email_templates?: Record<string, { subject: string; body: string }> | null
+  last_visited_at?: string | null
 }
 
 export interface CampaignWithStats extends Campaign {
@@ -29,7 +30,7 @@ export interface Prospect {
   org_size: string | null
   history_tags: string[] | null
   sequence_step: string
-  status: 'queued' | 'sent' | 'replied' | 'bounced' | 'unsubscribed'
+  status: 'queued' | 'sent' | 'replied' | 'bounced' | 'declined'
   paused: boolean
   sent_at: string | null
   custom_emails: Record<string, { subject: string; body: string }> | null
