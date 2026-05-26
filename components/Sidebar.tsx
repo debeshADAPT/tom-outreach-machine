@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
+import { signOut } from '@/app/actions/auth'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -123,12 +124,6 @@ export default function Sidebar() {
   }, [pathname])
 
   if (pathname === '/login') return null
-
-  async function handleSignOut() {
-    const supabase = createSupabaseBrowser()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
 
   function toggleCollapse() {
     const next = !collapsed
@@ -342,25 +337,27 @@ export default function Sidebar() {
       {/* Footer: Sign Out + Collapse toggle */}
       <div className="px-2 pb-5" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {/* Sign Out */}
-        <button
-          onClick={handleSignOut}
-          title="Sign out"
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: collapsed ? 0 : '10px',
-            padding: collapsed ? '8px' : '8px 10px',
-            border: 'none', borderRadius: '6px',
-            backgroundColor: 'transparent', color: '#6B7280',
-            cursor: 'pointer', fontSize: '14px', fontWeight: '500',
-            overflow: 'hidden', whiteSpace: 'nowrap',
-            transition: 'background-color 0.15s, color 0.15s',
-          }}
-          className="hover:bg-[#F3F3F1] hover:text-[#0D0D0D]"
-        >
-          <IconSignOut />
-          {!collapsed && <span>Sign Out</span>}
-        </button>
+        <form action={signOut} style={{ width: '100%' }}>
+          <button
+            type="submit"
+            title="Sign out"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: collapsed ? 0 : '10px',
+              padding: collapsed ? '8px' : '8px 10px',
+              border: 'none', borderRadius: '6px',
+              backgroundColor: 'transparent', color: '#6B7280',
+              cursor: 'pointer', fontSize: '14px', fontWeight: '500',
+              overflow: 'hidden', whiteSpace: 'nowrap',
+              transition: 'background-color 0.15s, color 0.15s',
+            }}
+            className="hover:bg-[#F3F3F1] hover:text-[#0D0D0D]"
+          >
+            <IconSignOut />
+            {!collapsed && <span>Sign Out</span>}
+          </button>
+        </form>
 
         {/* Collapse toggle */}
         <button
