@@ -85,13 +85,16 @@ async function TabContent({
   campaignId: string; tab: string; campaign: Campaign
 }) {
   const supabase = await createSupabaseServer()
-  const { data: prospects } = await supabase
-    .from('prospects')
-    .select('*')
-    .eq('campaign_id', campaignId)
-    .order('created_at', { ascending: true })
+  const [{ data: prospectsData }, { data: { user } }] = await Promise.all([
+    supabase.from('prospects').select('*').eq('campaign_id', campaignId).order('created_at', { ascending: true }),
+    supabase.auth.getUser(),
+  ])
 
-  const p = (prospects ?? []) as Prospect[]
+  const p = (prospectsData ?? []) as Prospect[]
+  const repName = user?.user_metadata?.full_name
+    ?? user?.user_metadata?.name
+    ?? user?.email?.split('@')[0]
+    ?? 'Your Name'
 
   return (
     <>
@@ -99,7 +102,7 @@ async function TabContent({
       {tab === 'ai-insights' && <AIInsightsTab campaign={campaign} prospects={p} />}
       {tab === 'prospects'   && <ProspectsTab campaign={campaign} prospects={p} />}
       {tab === 'sequence'    && <SequenceTab prospects={p} campaign={campaign} />}
-      {tab === 'email-logs'  && <EmailLogsTab campaign={campaign} prospects={p} />}
+      {tab === 'email-logs'  && <EmailLogsTab campaign={campaign} prospects={p} repName={repName} />}
       {tab === 'settings'    && <SettingsTab campaign={campaign} />}
     </>
   )

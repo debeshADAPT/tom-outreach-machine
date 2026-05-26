@@ -5,11 +5,11 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import type { Campaign, Prospect } from '@/lib/types'
 import { STEPS } from '@/lib/sequence-steps'
-import { createSupabaseBrowser } from '@/lib/supabase-browser'
 
 interface Props {
   campaign: Campaign
   prospects: Prospect[]
+  repName: string
 }
 
 interface EmailLog {
@@ -248,29 +248,18 @@ function ExpandedEmailView({ log, repName }: { log: EmailLog; repName: string })
   )
 }
 
-export default function EmailLogsTab({ campaign, prospects }: Props) {
+export default function EmailLogsTab({ campaign, prospects, repName }: Props) {
   const [searchInput, setSearchInput]     = useState('')
   const [searchQuery, setSearchQuery]     = useState('')
   const [sortCol, setSortCol]             = useState<SortCol>('sentAt')
   const [sortDir, setSortDir]             = useState<SortDir>('desc')
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null)
   const [hoveredRowId, setHoveredRowId]   = useState<string | null>(null)
-  const [repName, setRepName]             = useState('Your Name')
 
   useEffect(() => {
     const t = setTimeout(() => setSearchQuery(searchInput), 150)
     return () => clearTimeout(t)
   }, [searchInput])
-
-  useEffect(() => {
-    createSupabaseBrowser().auth.getUser().then(({ data }) => {
-      const n = data?.user?.user_metadata?.full_name
-        ?? data?.user?.user_metadata?.name
-        ?? data?.user?.email?.split('@')[0]
-        ?? 'Your Name'
-      setRepName(n)
-    })
-  }, [])
 
   const logs = useMemo(() => generateMockLogs(prospects, campaign), [prospects, campaign])
 
