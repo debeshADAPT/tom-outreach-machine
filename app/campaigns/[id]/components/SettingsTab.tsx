@@ -13,6 +13,7 @@ import { STEPS, type SequenceStep } from '@/lib/sequence-steps'
 
 interface Props {
   campaign: Campaign
+  isAdmin: boolean
 }
 
 // ─── Custom FontSize TipTap extension ────────────────────────────────────────
@@ -51,7 +52,7 @@ const toolbarBtnStyle: React.CSSProperties = {
   cursor: 'pointer', lineHeight: 1,
 }
 
-function SequenceTemplateCard({ step, campaign }: { step: SequenceStep; campaign: Campaign }) {
+function SequenceTemplateCard({ step, campaign, isAdmin }: { step: SequenceStep; campaign: Campaign; isAdmin: boolean }) {
   const [expanded, setExpanded] = useState(false)
   const [subject, setSubject] = useState(
     campaign.email_templates?.[step.key]?.subject ?? step.subject
@@ -121,16 +122,18 @@ function SequenceTemplateCard({ step, campaign }: { step: SequenceStep; campaign
             ✎ customised
           </span>
         )}
-        <button
-          onClick={e => { e.stopPropagation(); setExpanded(prev => !prev) }}
-          style={{
-            padding: '5px 12px', border: '1px solid #E5E5E5', borderRadius: '6px',
-            backgroundColor: expanded ? '#F7F6F3' : '#FFFFFF',
-            color: '#6B7280', fontSize: '12px', cursor: 'pointer', flexShrink: 0,
-          }}
-        >
-          {expanded ? 'Collapse' : 'Edit'}
-        </button>
+        {isAdmin && (
+          <button
+            onClick={e => { e.stopPropagation(); setExpanded(prev => !prev) }}
+            style={{
+              padding: '5px 12px', border: '1px solid #E5E5E5', borderRadius: '6px',
+              backgroundColor: expanded ? '#F7F6F3' : '#FFFFFF',
+              color: '#6B7280', fontSize: '12px', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            {expanded ? 'Collapse' : 'Edit'}
+          </button>
+        )}
       </div>
 
       {expanded && (
@@ -184,7 +187,7 @@ function SequenceTemplateCard({ step, campaign }: { step: SequenceStep; campaign
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SettingsTab({ campaign }: Props) {
+export default function SettingsTab({ campaign, isAdmin }: Props) {
   return (
     <div>
       <p style={{
@@ -198,7 +201,7 @@ export default function SettingsTab({ campaign }: Props) {
         Configure default delays and email templates for this campaign&apos;s outreach sequence.
       </p>
       {STEPS.map(step => (
-        <SequenceTemplateCard key={step.key} step={step} campaign={campaign} />
+        <SequenceTemplateCard key={step.key} step={step} campaign={campaign} isAdmin={isAdmin} />
       ))}
     </div>
   )

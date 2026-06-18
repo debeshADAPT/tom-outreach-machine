@@ -12,6 +12,7 @@ interface Props {
   onClose: () => void
   onStageChange: (prospectId: string, step: string) => void
   onOpenEmailPreview: (stepKey: string) => void
+  isAdmin: boolean
 }
 
 // MOCK DATA — replace with real Graph API reply content when integration is live
@@ -60,7 +61,7 @@ function Divider() {
   return <div style={{ borderTop: '1px solid #E5E5E5', margin: '20px 0' }} />
 }
 
-export default function ProspectDrawer({ prospect, campaign, onClose, onStageChange, onOpenEmailPreview }: Props) {
+export default function ProspectDrawer({ prospect, campaign, onClose, onStageChange, onOpenEmailPreview, isAdmin }: Props) {
   const [mounted, setMounted]           = useState(false)
   const [visible, setVisible]           = useState(false)
   const [currentStage, setCurrentStage] = useState(prospect.sequence_step)
@@ -255,14 +256,16 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
           <SectionLabel>Current Stage</SectionLabel>
           <select
             value={currentStage}
-            onChange={e => changeStage(e.target.value, 'Stage updated to')}
-            onFocus={e => { e.currentTarget.style.borderColor = '#E7534F' }}
+            onChange={e => isAdmin && changeStage(e.target.value, 'Stage updated to')}
+            onFocus={e => { if (isAdmin) e.currentTarget.style.borderColor = '#E7534F' }}
             onBlur={e => { e.currentTarget.style.borderColor = '#E5E5E5' }}
+            disabled={!isAdmin}
             style={{
               width: '100%', padding: '10px 12px', fontSize: '14px',
               color: '#0D0D0D', backgroundColor: '#FFFFFF',
               border: '1px solid #E5E5E5', borderRadius: '6px',
-              outline: 'none', cursor: 'pointer',
+              outline: 'none', cursor: isAdmin ? 'pointer' : 'default',
+              opacity: isAdmin ? 1 : 0.6,
             }}
           >
             {ALL_STAGES.map(stage => (
@@ -270,20 +273,22 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
             ))}
           </select>
 
-          {/* Trigger Next Step button */}
-          <button
-            onClick={nextStageObj ? () => changeStage(nextStageObj.id, 'Moved to') : undefined}
-            disabled={!nextStageObj}
-            style={{
-              width: '100%', padding: '10px', marginTop: '8px',
-              border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600',
-              cursor: nextStageObj ? 'pointer' : 'not-allowed',
-              backgroundColor: '#E7534F', color: '#FFFFFF',
-              opacity: nextStageObj ? 1 : 0.4,
-            }}
-          >
-            {nextStageObj ? 'Trigger Next Step →' : 'Sequence Complete'}
-          </button>
+          {/* Trigger Next Step button — admin only */}
+          {isAdmin && (
+            <button
+              onClick={nextStageObj ? () => changeStage(nextStageObj.id, 'Moved to') : undefined}
+              disabled={!nextStageObj}
+              style={{
+                width: '100%', padding: '10px', marginTop: '8px',
+                border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600',
+                cursor: nextStageObj ? 'pointer' : 'not-allowed',
+                backgroundColor: '#E7534F', color: '#FFFFFF',
+                opacity: nextStageObj ? 1 : 0.4,
+              }}
+            >
+              {nextStageObj ? 'Trigger Next Step →' : 'Sequence Complete'}
+            </button>
+          )}
 
           <Divider />
 

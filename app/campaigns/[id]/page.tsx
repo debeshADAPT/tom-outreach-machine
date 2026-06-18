@@ -12,6 +12,7 @@ import SequenceTab from './components/SequenceTab'
 import EmailLogsTab from './components/EmailLogsTab'
 import SettingsTab from './components/SettingsTab'
 import CampaignHeaderActions from './components/CampaignHeaderActions'
+import { RealtimeRefresher } from '@/components/RealtimeRefresher'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -30,11 +31,20 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
   // Update last_visited_at in the background (fire-and-forget)
   supabase.from('campaigns').update({ last_visited_at: new Date().toISOString() }).eq('id', id)
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id ?? '')
+    .single()
+  const isAdmin = profile?.role === 'admin'
+
   const c = campaign as Campaign
   const badge = campaignStatusBadge(c.status)
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3' }}>
+      <RealtimeRefresher tables={['campaigns', 'prospects']} />
       <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E5E5', padding: '24px 32px 0 32px' }}>
         <Link
           href="/campaigns"
@@ -60,7 +70,7 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CampaignHeaderActions campaign={c} />
+            <CampaignHeaderActions campaign={c} isAdmin={isAdmin} />
           </div>
         </div>
         <TabNav campaignId={id} activeTab={tab} />
@@ -72,7 +82,7 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
             <div className="w-8 h-8 rounded-full border-4 border-[#E5E5E5] border-t-[#E7534F] animate-spin" />
           </div>
         }>
-          <TabContent campaignId={id} tab={tab} campaign={c} />
+          <TabContent campaignId={id} tab={tab} campaign={c} isAdmin={isAdmin} />
         </Suspense>
       </div>
     </div>
@@ -80,9 +90,9 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
 }
 
 async function TabContent({
-  campaignId, tab, campaign,
+  campaignId, tab, campaign, isAdmin,
 }: {
-  campaignId: string; tab: string; campaign: Campaign
+  campaignId: string; tab: string; campaign: Campaign; isAdmin: boolean
 }) {
   const supabase = await createSupabaseServer()
   const [{ data: prospectsData }, { data: { user } }] = await Promise.all([
@@ -101,9 +111,9 @@ async function TabContent({
       {tab === 'dashboard'   && <OverviewTab campaign={campaign} prospects={p} />}
       {tab === 'ai-insights' && <AIInsightsTab campaign={campaign} prospects={p} />}
       {tab === 'prospects'   && <ProspectsTab campaign={campaign} prospects={p} />}
-      {tab === 'sequence'    && <SequenceTab prospects={p} campaign={campaign} />}
+      {tab === 'sequence'    && <SequenceTab prospects={p} campaign={campaign} isAdmin={isAdmin} />}
       {tab === 'email-logs'  && <EmailLogsTab campaign={campaign} prospects={p} repName={repName} />}
-      {tab === 'settings'    && <SettingsTab campaign={campaign} />}
+      {tab === 'settings'    && <SettingsTab campaign={campaign} isAdmin={isAdmin} />}
     </>
   )
 }

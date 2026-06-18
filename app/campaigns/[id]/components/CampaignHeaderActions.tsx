@@ -10,6 +10,7 @@ import ImportModal from './ImportModal'
 
 interface Props {
   campaign: Campaign
+  isAdmin: boolean
 }
 
 // ─── Cog icon ─────────────────────────────────────────────────────────────────
@@ -32,12 +33,14 @@ function ProspectsDropdown({
   campaignName,
   onImport,
   onClose,
+  isAdmin,
 }: {
   pos: DropdownPos
   campaignId: string
   campaignName: string
   onImport: () => void
   onClose: () => void
+  isAdmin: boolean
 }) {
   const [exporting, setExporting] = useState(false)
 
@@ -79,14 +82,16 @@ function ProspectsDropdown({
           minWidth: '200px', zIndex: 100, padding: '4px 0', overflow: 'hidden',
         }}
       >
-        <button
-          style={itemStyle}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F6F3')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-          onClick={() => { onClose(); onImport() }}
-        >
-          <span>↑</span> Add Prospects
-        </button>
+        {isAdmin && (
+          <button
+            style={itemStyle}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F6F3')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            onClick={() => { onClose(); onImport() }}
+          >
+            <span>↑</span> Add Prospects
+          </button>
+        )}
         <button
           style={{ ...itemStyle, opacity: exporting ? 0.6 : 1 }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F6F3')}
@@ -104,7 +109,7 @@ function ProspectsDropdown({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function CampaignHeaderActions({ campaign }: Props) {
+export default function CampaignHeaderActions({ campaign, isAdmin }: Props) {
   const [cogOpen, setCogOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<DropdownPos>({ top: 0, right: 0 })
@@ -136,25 +141,27 @@ export default function CampaignHeaderActions({ campaign }: Props) {
         Last updated 2h ago 🔄
       </span>
 
-      {/* Cog button */}
-      <button
-        onClick={() => setCogOpen(true)}
-        onMouseEnter={() => setCogHovered(true)}
-        onMouseLeave={() => setCogHovered(false)}
-        title="Campaign Settings"
-        style={{
-          width: '36px', height: '36px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          borderRadius: '6px', border: '1px solid #E5E5E5',
-          backgroundColor: '#FFFFFF', cursor: 'pointer',
-          color: cogHovered ? '#E7534F' : '#6B7280',
-          borderColor: cogHovered ? '#E7534F' : '#E5E5E5',
-          transition: 'color 0.15s, border-color 0.15s',
-          flexShrink: 0,
-        }}
-      >
-        <IconCog />
-      </button>
+      {/* Cog button — admin only */}
+      {isAdmin && (
+        <button
+          onClick={() => setCogOpen(true)}
+          onMouseEnter={() => setCogHovered(true)}
+          onMouseLeave={() => setCogHovered(false)}
+          title="Campaign Settings"
+          style={{
+            width: '36px', height: '36px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: '6px', border: '1px solid #E5E5E5',
+            backgroundColor: '#FFFFFF', cursor: 'pointer',
+            color: cogHovered ? '#E7534F' : '#6B7280',
+            borderColor: cogHovered ? '#E7534F' : '#E5E5E5',
+            transition: 'color 0.15s, border-color 0.15s',
+            flexShrink: 0,
+          }}
+        >
+          <IconCog />
+        </button>
+      )}
 
       {/* Prospects ▾ button */}
       <button
@@ -177,6 +184,7 @@ export default function CampaignHeaderActions({ campaign }: Props) {
           campaignName={campaign.name}
           onImport={() => setImportOpen(true)}
           onClose={() => setDropdownOpen(false)}
+          isAdmin={isAdmin}
         />
       )}
 
@@ -220,7 +228,7 @@ export default function CampaignHeaderActions({ campaign }: Props) {
               </button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-              <CampaignDetailsForm campaign={campaign} />
+              <CampaignDetailsForm campaign={campaign} isAdmin={isAdmin} />
             </div>
           </div>
         </>,

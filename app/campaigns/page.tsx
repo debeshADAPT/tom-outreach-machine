@@ -6,13 +6,21 @@ export default async function CampaignsPage() {
   const supabase = await createSupabaseServer()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return <CampaignsClient campaigns={[]} />
+  if (!user) return <CampaignsClient campaigns={[]} isAdmin={false} />
 
-  const { data: campaigns } = await supabase
-    .from('campaigns')
-    .select('*, prospects(count)')
-    .eq('user_id', user.id)
-    .order('event_date', { ascending: true })
+  const [{ data: campaigns }, { data: profile }] = await Promise.all([
+    supabase
+      .from('campaigns')
+      .select('*, prospects(count)')
+      .order('event_date', { ascending: true }),
+    supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single(),
+  ])
+
+  const isAdmin = profile?.role === 'admin'
 
   const campaignList = (campaigns ?? []) as unknown as Array<Campaign & { prospects: [{ count: number }] }>
   const campaignIds = campaignList.map(c => c.id)
@@ -44,5 +52,5 @@ export default async function CampaignsPage() {
     sentProspects: sentMap.get(c.id) ?? 0,
   }))
 
-  return <CampaignsClient campaigns={campaignsWithStats} />
+  return <CampaignsClient campaigns={campaignsWithStats} isAdmin={isAdmin} />
 }

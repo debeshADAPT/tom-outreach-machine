@@ -1,6 +1,7 @@
 'use server'
 
 import { createSupabaseServer } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/require-admin'
 import { refresh } from 'next/cache'
 
 export async function checkDuplicates(
@@ -29,6 +30,7 @@ export async function insertProspects(
     org_size: string | null
   }>
 ): Promise<{ inserted: number }> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { data, error } = await supabase
     .from('prospects')
@@ -62,6 +64,7 @@ export async function updateCampaign(
     event_brief: string | null
   }
 ): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('campaigns')
@@ -78,6 +81,7 @@ export async function updateCampaign(
 }
 
 export async function startProspectSequence(prospectId: string): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('prospects')
@@ -90,6 +94,7 @@ export async function startProspectSequence(prospectId: string): Promise<void> {
 
 export async function bulkStartSequences(prospectIds: string[]): Promise<{ started: number }> {
   if (prospectIds.length === 0) return { started: 0 }
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { data, error } = await supabase
     .from('prospects')
@@ -103,6 +108,7 @@ export async function bulkStartSequences(prospectIds: string[]): Promise<{ start
 }
 
 export async function toggleProspectPaused(prospectId: string, paused: boolean): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('prospects')
@@ -113,6 +119,7 @@ export async function toggleProspectPaused(prospectId: string, paused: boolean):
 }
 
 export async function moveProspectToStep(prospectId: string, step: string): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('prospects')
@@ -124,6 +131,7 @@ export async function moveProspectToStep(prospectId: string, step: string): Prom
 
 export async function bulkMoveToStep(prospectIds: string[], step: string): Promise<void> {
   if (prospectIds.length === 0) return
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('prospects')
@@ -135,6 +143,7 @@ export async function bulkMoveToStep(prospectIds: string[], step: string): Promi
 
 export async function bulkPause(prospectIds: string[]): Promise<void> {
   if (prospectIds.length === 0) return
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('prospects')
@@ -149,6 +158,7 @@ export async function saveCustomEmail(
   stepKey: string,
   email: { subject: string; body: string }
 ): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { data } = await supabase
     .from('prospects')
@@ -170,6 +180,7 @@ export async function saveProspectCustomDelay(
   value: number,
   currentCustomDelays: Record<string, number> | null
 ): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('prospects')
@@ -184,6 +195,7 @@ export async function saveCampaignTemplate(
   stepKey: string,
   email: { subject: string; body: string }
 ): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { data } = await supabase
     .from('campaigns')
@@ -203,6 +215,7 @@ export async function saveSequenceDelays(
   campaignId: string,
   delays: Record<string, number>
 ): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { error } = await supabase
     .from('campaigns')

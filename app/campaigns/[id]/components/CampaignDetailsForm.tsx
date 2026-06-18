@@ -6,6 +6,7 @@ import type { Campaign } from '@/lib/types'
 
 interface Props {
   campaign: Campaign
+  isAdmin: boolean
 }
 
 const inputStyle: React.CSSProperties = {
@@ -20,7 +21,7 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '0.05em',
 }
 
-export default function CampaignDetailsForm({ campaign }: Props) {
+export default function CampaignDetailsForm({ campaign, isAdmin }: Props) {
   const [name, setName] = useState(campaign.name)
   const [theme, setTheme] = useState(campaign.theme ?? '')
   const [eventDate, setEventDate] = useState(campaign.event_date ?? '')
@@ -99,21 +100,23 @@ export default function CampaignDetailsForm({ campaign }: Props) {
           placeholder="Brief description of the event, its goals, and target audience…"
         />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button
-          onClick={handleSave}
-          disabled={saving || !name.trim()}
-          style={{
-            padding: '9px 20px', border: 'none', borderRadius: '8px',
-            backgroundColor: saving || !name.trim() ? '#F3A09F' : '#E7534F',
-            color: '#FFFFFF', fontSize: '14px', fontWeight: '600',
-            cursor: saving || !name.trim() ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        {saved && <span style={{ fontSize: '13px', color: '#16A34A' }}>✓ Saved</span>}
-      </div>
+      {isAdmin && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={handleSave}
+            disabled={saving || !name.trim()}
+            style={{
+              padding: '9px 20px', border: 'none', borderRadius: '8px',
+              backgroundColor: saving || !name.trim() ? '#F3A09F' : '#E7534F',
+              color: '#FFFFFF', fontSize: '14px', fontWeight: '600',
+              cursor: saving || !name.trim() ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          {saved && <span style={{ fontSize: '13px', color: '#16A34A' }}>✓ Saved</span>}
+        </div>
+      )}
     </div>
   )
 }

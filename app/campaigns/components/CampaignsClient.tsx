@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { formatDate, campaignStatusBadge } from '@/lib/utils'
 import type { CampaignWithStats } from '@/lib/types'
 import NewCampaignModal from './NewCampaignModal'
+import { RealtimeRefresher } from '@/components/RealtimeRefresher'
 
 const FILTERS = ['All', 'Active', 'Draft', 'Completed'] as const
 type Filter = (typeof FILTERS)[number]
 
 interface Props {
   campaigns: CampaignWithStats[]
+  isAdmin: boolean
 }
 
 function sortCampaigns(list: CampaignWithStats[]): CampaignWithStats[] {
@@ -25,7 +27,7 @@ function sortCampaigns(list: CampaignWithStats[]): CampaignWithStats[] {
   })
 }
 
-export default function CampaignsClient({ campaigns }: Props) {
+export default function CampaignsClient({ campaigns, isAdmin }: Props) {
   const [filter, setFilter] = useState<Filter>('All')
   const [showModal, setShowModal] = useState(false)
 
@@ -34,6 +36,7 @@ export default function CampaignsClient({ campaigns }: Props) {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3', padding: '32px' }}>
+      <RealtimeRefresher tables={['campaigns']} />
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
@@ -44,18 +47,20 @@ export default function CampaignsClient({ campaigns }: Props) {
             {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="transition-colors"
-          style={{
-            padding: '10px 18px', backgroundColor: '#E7534F', color: '#FFFFFF',
-            border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94440')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E7534F')}
-        >
-          + New Campaign
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="transition-colors"
+            style={{
+              padding: '10px 18px', backgroundColor: '#E7534F', color: '#FFFFFF',
+              border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94440')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E7534F')}
+          >
+            + New Campaign
+          </button>
+        )}
       </div>
 
       {/* Filter pills */}
@@ -78,7 +83,7 @@ export default function CampaignsClient({ campaigns }: Props) {
       </div>
 
       {sorted.length === 0 ? (
-        <EmptyState onNew={() => setShowModal(true)} isFiltered={filter !== 'All'} />
+        <EmptyState onNew={() => setShowModal(true)} isFiltered={filter !== 'All'} isAdmin={isAdmin} />
       ) : (
         <CampaignsTable campaigns={sorted} />
       )}
@@ -88,7 +93,7 @@ export default function CampaignsClient({ campaigns }: Props) {
   )
 }
 
-function EmptyState({ onNew, isFiltered }: { onNew: () => void; isFiltered: boolean }) {
+function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFiltered: boolean; isAdmin: boolean }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -104,7 +109,7 @@ function EmptyState({ onNew, isFiltered }: { onNew: () => void; isFiltered: bool
           ? 'Try selecting a different filter above.'
           : 'Create your first one to get started.'}
       </p>
-      {!isFiltered && (
+      {!isFiltered && isAdmin && (
         <button
           onClick={onNew}
           style={{

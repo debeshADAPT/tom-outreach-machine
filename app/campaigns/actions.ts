@@ -1,9 +1,11 @@
 'use server'
 
 import { createSupabaseServer } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/require-admin'
 import { refresh } from 'next/cache'
 
 export async function createCampaign(formData: FormData): Promise<void> {
+  await requireAdmin()
   const supabase = await createSupabaseServer()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
