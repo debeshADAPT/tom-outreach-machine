@@ -13,6 +13,7 @@ type Filter = (typeof FILTERS)[number]
 interface Props {
   campaigns: CampaignWithStats[]
   isAdmin: boolean
+  accessError?: string
 }
 
 function sortCampaigns(list: CampaignWithStats[]): CampaignWithStats[] {
@@ -27,9 +28,60 @@ function sortCampaigns(list: CampaignWithStats[]): CampaignWithStats[] {
   })
 }
 
-export default function CampaignsClient({ campaigns, isAdmin }: Props) {
+function RepAvatars({ reps }: { reps: { userId: string; displayName: string }[] }) {
+  if (reps.length === 0) return null
+  const shown = reps.slice(0, 3)
+  const overflow = reps.length - 3
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '-4px' }}>
+      {shown.map((rep, i) => {
+        const initials = rep.displayName
+          .split(' ')
+          .map(w => w[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2)
+        const colors = ['#E7534F', '#4F7FE7', '#4FE7A0', '#E7C44F']
+        const bg = colors[i % colors.length]
+        return (
+          <div
+            key={rep.userId}
+            title={rep.displayName}
+            style={{
+              width: '24px', height: '24px', borderRadius: '50%',
+              backgroundColor: bg, color: '#FFFFFF',
+              fontSize: '10px', fontWeight: '600',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1.5px solid #FFFFFF',
+              marginLeft: i > 0 ? '-6px' : 0,
+              flexShrink: 0,
+            }}
+          >
+            {initials}
+          </div>
+        )
+      })}
+      {overflow > 0 && (
+        <div style={{
+          width: '24px', height: '24px', borderRadius: '50%',
+          backgroundColor: '#E5E5E5', color: '#6B7280',
+          fontSize: '10px', fontWeight: '600',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: '1.5px solid #FFFFFF',
+          marginLeft: '-6px', flexShrink: 0,
+        }}>
+          +{overflow}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function CampaignsClient({ campaigns, isAdmin, accessError }: Props) {
   const [filter, setFilter] = useState<Filter>('All')
   const [showModal, setShowModal] = useState(false)
+  const [dismissedError, setDismissedError] = useState(false)
 
   const filtered = campaigns.filter(c => filter === 'All' || c.status === filter.toLowerCase())
   const sorted = sortCampaigns(filtered)
@@ -37,11 +89,30 @@ export default function CampaignsClient({ campaigns, isAdmin }: Props) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3', padding: '32px' }}>
       <RealtimeRefresher tables={['campaigns']} />
+
+      {/* Access error banner */}
+      {accessError === 'not_assigned' && !dismissedError && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          backgroundColor: '#FEF3C7', border: '1px solid #FCD34D',
+          borderRadius: '8px', padding: '12px 16px', marginBottom: '20px',
+          fontSize: '14px', color: '#92400E',
+        }}>
+          <span>You don&apos;t have access to that campaign. Ask an admin to assign you.</span>
+          <button
+            onClick={() => setDismissedError(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#92400E', fontSize: '16px', lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0D0D0D', margin: 0, lineHeight: 1.2 }}>
-            My Campaigns
+            Campaigns
           </h1>
           <p style={{ marginTop: '4px', fontSize: '14px', color: '#6B7280' }}>
             {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
@@ -107,7 +178,9 @@ function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFilte
       <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
         {isFiltered
           ? 'Try selecting a different filter above.'
-          : 'Create your first one to get started.'}
+          : isAdmin
+          ? 'Create your first one to get started.'
+          : 'You haven\'t been assigned to any campaigns yet.'}
       </p>
       {!isFiltered && isAdmin && (
         <button
@@ -135,7 +208,7 @@ function CampaignsTable({ campaigns }: { campaigns: CampaignWithStats[] }) {
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid #E5E5E5' }}>
-            {['Campaign', 'Theme', 'Event Date', 'Contacts', 'Progress', 'Status'].map(col => (
+            {['Campaign', 'Theme', 'Event Date', 'Contacts', 'Progress', 'Reps', 'Status'].map(col => (
               <th key={col} style={{
                 padding: '12px 16px', textAlign: 'left', fontSize: '11px',
                 fontWeight: '600', color: '#6B7280', letterSpacing: '0.06em',
@@ -196,6 +269,9 @@ function CampaignRow({ campaign, isLast }: { campaign: CampaignWithStats; isLast
         <span style={{ fontSize: '12px', color: '#6B7280' }}>
           {campaign.sentProspects} / {campaign.totalProspects} sent
         </span>
+      </td>
+      <td style={{ padding: '14px 16px' }}>
+        <RepAvatars reps={campaign.assignedReps} />
       </td>
       <td style={{ padding: '14px 16px' }}>
         <span style={{

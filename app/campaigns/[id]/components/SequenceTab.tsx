@@ -25,9 +25,10 @@ interface Props {
   prospects: Prospect[]
   campaign: Campaign
   isAdmin: boolean
+  currentUserId: string
+  repDelays: Record<string, number> | null
+  profilesMap?: Record<string, string>
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const DELAY_GAP_KEYS = [
   'invite_to_followup1',
@@ -87,11 +88,6 @@ function computeStepOffsets(delays: Record<string, number>): Record<string, numb
   }
 }
 
-function formatShortDate(d: Date): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${d.getDate()} ${months[d.getMonth()]}`
-}
-
 function formatDateDisplay(d: Date): string {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const h = d.getHours()
@@ -148,10 +144,7 @@ function HistoryTags({ tags }: { tags: string[] | null }) {
         <span key={tag} style={tagStyle}>{tag}</span>
       ))}
       {!expanded && overflow > 0 && (
-        <button
-          onClick={() => setExpanded(true)}
-          style={{ ...tagStyle, border: 'none', cursor: 'pointer' }}
-        >
+        <button onClick={() => setExpanded(true)} style={{ ...tagStyle, border: 'none', cursor: 'pointer' }}>
           +{overflow} more
         </button>
       )}
@@ -161,11 +154,11 @@ function HistoryTags({ tags }: { tags: string[] | null }) {
 
 // ─── DayGapBox ────────────────────────────────────────────────────────────────
 
-function DayGapBox({ value, isCustom, onChange, isAdmin }: {
+function DayGapBox({ value, isCustom, onChange, canEdit }: {
   value: number
   isCustom: boolean
   onChange: (v: number) => void
-  isAdmin: boolean
+  canEdit: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(String(value))
@@ -176,7 +169,7 @@ function DayGapBox({ value, isCustom, onChange, isAdmin }: {
     setEditing(false)
   }
 
-  if (editing && isAdmin) {
+  if (editing && canEdit) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '2px', margin: '0 4px', flexShrink: 0 }}>
         <span style={{ fontSize: '11px', color: '#9CA3AF' }}>+</span>
@@ -186,8 +179,7 @@ function DayGapBox({ value, isCustom, onChange, isAdmin }: {
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
-          autoFocus
-          min={1}
+          autoFocus min={1}
           style={{
             width: '36px', padding: '2px 4px',
             border: '1px solid #E7534F', borderRadius: '4px',
@@ -201,18 +193,18 @@ function DayGapBox({ value, isCustom, onChange, isAdmin }: {
 
   return (
     <div
-      onClick={() => { if (!isAdmin) return; setDraft(String(value)); setEditing(true) }}
-      title={isAdmin ? 'Click to edit delay' : undefined}
+      onClick={() => { if (!canEdit) return; setDraft(String(value)); setEditing(true) }}
+      title={canEdit ? 'Click to edit delay' : undefined}
       style={{
         display: 'flex', alignItems: 'center', gap: '3px',
-        margin: '0 4px', cursor: isAdmin ? 'pointer' : 'default', flexShrink: 0,
+        margin: '0 4px', cursor: canEdit ? 'pointer' : 'default', flexShrink: 0,
         padding: '2px 6px', borderRadius: '4px',
       }}
-      onMouseEnter={e => { if (isAdmin) e.currentTarget.style.backgroundColor = '#F7F6F3' }}
+      onMouseEnter={e => { if (canEdit) e.currentTarget.style.backgroundColor = '#F7F6F3' }}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
     >
       <span style={{ fontSize: '11px', color: isCustom ? '#E7534F' : '#9CA3AF' }}>+{value}d</span>
-      {isAdmin && <span style={{ fontSize: '10px', color: '#D1D5DB' }}>✎</span>}
+      {canEdit && <span style={{ fontSize: '10px', color: '#D1D5DB' }}>✎</span>}
     </div>
   )
 }
@@ -222,22 +214,24 @@ function DayGapBox({ value, isCustom, onChange, isAdmin }: {
 function StepPills({
   prospect,
   campaign,
+  baseDelays,
   onPillClick,
   onDelayChange,
-  isAdmin,
+  canEdit,
 }: {
   prospect: Prospect
   campaign: Campaign
+  baseDelays: Record<string, number>
   onPillClick: (p: Prospect, stepKey: string) => void
   onDelayChange: (prospectId: string, gapKey: string, value: number) => void
-  isAdmin: boolean
+  canEdit: boolean
 }) {
   const currentIdx = STEP_ORDER.indexOf(prospect.sequence_step as StepKey)
   const prospectCustomDelays = prospect.custom_delays ?? {}
 
   const effectiveDelays: Record<string, number> = {}
   for (const key of DELAY_GAP_KEYS) {
-    effectiveDelays[key] = prospectCustomDelays[key] ?? (campaign.sequence_delays ?? {})[key] ?? DEFAULT_DELAYS[key]
+    effectiveDelays[key] = prospectCustomDelays[key] ?? baseDelays[key] ?? DEFAULT_DELAYS[key]
   }
 
   const stepDates = calculateStepDates(prospect, campaign)
@@ -288,9 +282,7 @@ function StepPills({
                     backgroundColor: isCurrent ? 'rgba(255,255,255,0.25)' : '#F3F3F1',
                     color: isCurrent ? '#FFFFFF' : '#9CA3AF',
                     fontSize: '10px', fontWeight: '400',
-                  }}>
-                    ✎
-                  </span>
+                  }}>✎</span>
                 )}
               </button>
               <span style={{ fontSize: '10px', color: pillDate.color, whiteSpace: 'nowrap' }}>
@@ -304,7 +296,7 @@ function StepPills({
                   value={effectiveDelays[gapKey] ?? DEFAULT_DELAYS[gapKey] ?? 3}
                   isCustom={isGapCustom}
                   onChange={v => onDelayChange(prospect.id, gapKey, v)}
-                  isAdmin={isAdmin}
+                  canEdit={canEdit}
                 />
               </div>
             )}
@@ -330,7 +322,7 @@ function EmailModal({
   campaignDelays,
   onClose,
   onSaved,
-  isAdmin,
+  canEdit,
 }: {
   prospect: Prospect
   stepKey: string
@@ -338,7 +330,7 @@ function EmailModal({
   campaignDelays: Record<string, number>
   onClose: () => void
   onSaved: (stepKey: string, email: { subject: string; body: string }) => void
-  isAdmin: boolean
+  canEdit: boolean
 }) {
   const step = STEPS.find(s => s.key === stepKey)
 
@@ -462,7 +454,7 @@ function EmailModal({
                 }}>
                   {sentStatus}
                 </span>
-              ) : mode === 'view' && isAdmin ? (
+              ) : mode === 'view' && canEdit ? (
                 <button
                   onClick={() => setMode('edit')}
                   style={{
@@ -599,18 +591,9 @@ function EmailModal({
               padding: '8px 16px', borderBottom: '1px solid #E5E5E5',
               backgroundColor: '#FAFAFA',
             }}>
-              <button
-                onClick={() => editor?.chain().focus().toggleBold().run()}
-                style={{ ...toolbarBtnStyle, fontWeight: '700', backgroundColor: editor?.isActive('bold') ? '#F3F3F1' : '#FFFFFF' }}
-              >B</button>
-              <button
-                onClick={() => editor?.chain().focus().toggleItalic().run()}
-                style={{ ...toolbarBtnStyle, fontStyle: 'italic', backgroundColor: editor?.isActive('italic') ? '#F3F3F1' : '#FFFFFF' }}
-              >I</button>
-              <button
-                onClick={() => editor?.chain().focus().toggleUnderline().run()}
-                style={{ ...toolbarBtnStyle, textDecoration: 'underline', backgroundColor: editor?.isActive('underline') ? '#F3F3F1' : '#FFFFFF' }}
-              >U</button>
+              <button onClick={() => editor?.chain().focus().toggleBold().run()} style={{ ...toolbarBtnStyle, fontWeight: '700', backgroundColor: editor?.isActive('bold') ? '#F3F3F1' : '#FFFFFF' }}>B</button>
+              <button onClick={() => editor?.chain().focus().toggleItalic().run()} style={{ ...toolbarBtnStyle, fontStyle: 'italic', backgroundColor: editor?.isActive('italic') ? '#F3F3F1' : '#FFFFFF' }}>I</button>
+              <button onClick={() => editor?.chain().focus().toggleUnderline().run()} style={{ ...toolbarBtnStyle, textDecoration: 'underline', backgroundColor: editor?.isActive('underline') ? '#F3F3F1' : '#FFFFFF' }}>U</button>
               <button
                 onClick={() => {
                   const url = window.prompt('Link URL', 'https://')
@@ -618,14 +601,8 @@ function EmailModal({
                 }}
                 style={{ ...toolbarBtnStyle, backgroundColor: editor?.isActive('link') ? '#F3F3F1' : '#FFFFFF' }}
               >🔗</button>
-              <button
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                style={{ ...toolbarBtnStyle, backgroundColor: editor?.isActive('bulletList') ? '#F3F3F1' : '#FFFFFF' }}
-              >• List</button>
-              <button
-                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-                style={{ ...toolbarBtnStyle, backgroundColor: editor?.isActive('orderedList') ? '#F3F3F1' : '#FFFFFF' }}
-              >1. List</button>
+              <button onClick={() => editor?.chain().focus().toggleBulletList().run()} style={{ ...toolbarBtnStyle, backgroundColor: editor?.isActive('bulletList') ? '#F3F3F1' : '#FFFFFF' }}>• List</button>
+              <button onClick={() => editor?.chain().focus().toggleOrderedList().run()} style={{ ...toolbarBtnStyle, backgroundColor: editor?.isActive('orderedList') ? '#F3F3F1' : '#FFFFFF' }}>1. List</button>
               <select
                 onChange={e => {
                   if (e.target.value) {
@@ -635,8 +612,7 @@ function EmailModal({
                 defaultValue=""
                 style={{
                   fontSize: '12px', border: '1px solid #E5E5E5', borderRadius: '4px',
-                  padding: '4px 6px', cursor: 'pointer', backgroundColor: '#FFFFFF',
-                  color: '#374151',
+                  padding: '4px 6px', cursor: 'pointer', backgroundColor: '#FFFFFF', color: '#374151',
                 }}
               >
                 <option value="" disabled>Size</option>
@@ -668,10 +644,7 @@ function EmailModal({
                 </button>
                 {loadTemplateOpen && (
                   <>
-                    <div
-                      style={{ position: 'fixed', inset: 0, zIndex: 60 }}
-                      onClick={() => setLoadTemplateOpen(false)}
-                    />
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 60 }} onClick={() => setLoadTemplateOpen(false)} />
                     <div style={{
                       position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, zIndex: 61,
                       backgroundColor: '#FFFFFF', border: '0.5px solid #E5E5E5',
@@ -712,16 +685,12 @@ function EmailModal({
                     <button
                       onClick={() => {
                         const tmpl = STEPS.find(s => s.key === confirmTemplate)
-                        if (tmpl) {
-                          setEditSubject(tmpl.subject)
-                          editor?.commands.setContent(tmpl.body)
-                        }
+                        if (tmpl) { setEditSubject(tmpl.subject); editor?.commands.setContent(tmpl.body) }
                         setConfirmTemplate(null)
                       }}
                       style={{
                         padding: '5px 12px', border: 'none', borderRadius: '6px',
-                        backgroundColor: '#E7534F', color: '#FFFFFF', fontSize: '13px',
-                        cursor: 'pointer',
+                        backgroundColor: '#E7534F', color: '#FFFFFF', fontSize: '13px', cursor: 'pointer',
                       }}
                     >
                       Replace
@@ -730,8 +699,7 @@ function EmailModal({
                       onClick={() => setConfirmTemplate(null)}
                       style={{
                         padding: '5px 12px', border: '1px solid #E5E5E5', borderRadius: '6px',
-                        backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '13px',
-                        cursor: 'pointer',
+                        backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '13px', cursor: 'pointer',
                       }}
                     >
                       Cancel
@@ -784,11 +752,8 @@ const SEQUENCE_GROUPS = [
 
 function getGroupProspects(groupId: string, prospects: Prospect[]): Prospect[] {
   switch (groupId) {
-    // Not Started = haven't entered the sequence at all (sequence_step = 'not_started', any status)
     case 'not_started': return prospects.filter(p => p.sequence_step === 'not_started')
-    // Queued = assigned a step but email is pending send (any step except not_started, status = 'queued')
     case 'queued':      return prospects.filter(p => p.status === 'queued' && p.sequence_step !== 'not_started')
-    // All remaining groups are purely sequence_step based, regardless of status
     case 'invite_1':    return prospects.filter(p => p.sequence_step === 'invite_1')
     case 'followup_1':  return prospects.filter(p => p.sequence_step === 'followup_1')
     case 'followup_2':  return prospects.filter(p => p.sequence_step === 'followup_2')
@@ -800,7 +765,7 @@ function getGroupProspects(groupId: string, prospects: Prospect[]): Prospect[] {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
+export default function SequenceTab({ prospects, campaign, isAdmin, currentUserId, repDelays, profilesMap }: Props) {
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false)
@@ -810,9 +775,11 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [drawerProspect, setDrawerProspect] = useState<Prospect | null>(null)
 
-  const campaignDelays: Record<string, number> = {
+  // Merged base delays: campaign defaults overlaid with rep's personal delays
+  const mergedBaseDelays: Record<string, number> = {
     ...DEFAULT_DELAYS,
     ...(campaign.sequence_delays ?? {}),
+    ...(repDelays ?? {}),
   }
 
   function getEffective(p: Prospect): Prospect {
@@ -910,9 +877,7 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
     if (!modal) return
     const pid = modal.prospect.id
     const currentCustom = (getEffective(modal.prospect).custom_emails ?? {}) as Record<string, { subject: string; body: string }>
-    applyOverride(pid, {
-      custom_emails: { ...currentCustom, [stepKey]: email },
-    })
+    applyOverride(pid, { custom_emails: { ...currentCustom, [stepKey]: email } })
     showToast(`Email saved for ${modal.prospect.full_name ?? 'prospect'}`)
   }
 
@@ -932,6 +897,7 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
     const isReplied = p.status === 'replied'
     const isSelected = selectedIds.has(p.id)
     const showPause = groupId !== 'not_started'
+    const canActOnProspect = isAdmin || p.assigned_to === currentUserId
 
     const defaultBg = isReplied ? '#F0FDF4' : isPaused ? '#FFFBEB' : '#FFFFFF'
     return (
@@ -950,15 +916,14 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
         }}
       >
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-          {isAdmin && (
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => toggleSelect(p.id)}
-              onClick={e => e.stopPropagation()}
-              style={{ marginTop: '2px', flexShrink: 0, accentColor: '#E7534F', cursor: 'pointer' }}
-            />
-          )}
+          {/* Checkbox — visible to all; RLS silently ignores non-owned rows in bulk actions */}
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => toggleSelect(p.id)}
+            onClick={e => e.stopPropagation()}
+            style={{ marginTop: '2px', flexShrink: 0, accentColor: '#E7534F', cursor: 'pointer' }}
+          />
 
           <div style={{ width: '220px', flexShrink: 0 }}>
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#0D0D0D', lineHeight: 1.3 }}>
@@ -979,6 +944,17 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
                 <HistoryTags tags={p.history_tags} />
               </div>
             )}
+            {/* Rep badge — admin view only */}
+            {isAdmin && p.assigned_to && profilesMap && (
+              <div style={{ marginTop: '4px' }}>
+                <span style={{
+                  fontSize: '11px', color: '#9CA3AF', backgroundColor: '#F3F3F1',
+                  padding: '2px 7px', borderRadius: '20px',
+                }}>
+                  {profilesMap[p.assigned_to] ?? 'Unknown rep'}
+                </span>
+              </div>
+            )}
           </div>
 
           <div onClick={e => e.stopPropagation()} style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '12px', minWidth: 0, overflow: 'visible' }}>
@@ -986,14 +962,15 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
               <StepPills
                 prospect={p}
                 campaign={campaign}
+                baseDelays={mergedBaseDelays}
                 onPillClick={(pr, sk) => setModal({ prospect: pr, stepKey: sk })}
                 onDelayChange={handleDelayChange}
-                isAdmin={isAdmin}
+                canEdit={canActOnProspect}
               />
             </div>
 
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-              {showPause && isAdmin && (
+              {showPause && canActOnProspect && (
                 <button
                   onClick={e => { e.stopPropagation(); handlePauseToggle(p) }}
                   title={isPaused ? 'Resume' : 'Pause'}
@@ -1054,8 +1031,8 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
         />
       </div>
 
-      {/* Bulk action bar — admin only */}
-      {hasSel && isAdmin && (
+      {/* Bulk action bar */}
+      {hasSel && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '12px',
           backgroundColor: '#0D0D0D', color: '#FFFFFF',
@@ -1123,7 +1100,7 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
         </div>
       )}
 
-      {/* Empty campaign state */}
+      {/* Empty state */}
       {prospects.length === 0 ? (
         <div style={{
           backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
@@ -1133,11 +1110,10 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
             No prospects yet.
           </p>
           <p style={{ fontSize: '13px', color: '#6B7280' }}>
-            Import prospects from the Prospects tab to get started.
+            Import prospects from the Prospects ▾ button to get started.
           </p>
         </div>
       ) : (
-        /* Grouped sections */
         SEQUENCE_GROUPS.map(group => {
           const groupProspects = getGroupProspects(group.id, allProspects)
           const filteredProspects = groupProspects.filter(searchMatch)
@@ -1147,7 +1123,6 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
 
           return (
             <div key={group.id}>
-              {/* Section header */}
               <div
                 onClick={isEmpty ? undefined : () => toggleGroupExpand(group.id)}
                 onMouseEnter={isEmpty ? undefined : e => { e.currentTarget.style.backgroundColor = '#F7F6F3' }}
@@ -1190,7 +1165,6 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
                 )}
               </div>
 
-              {/* Section content */}
               {isExpanded && !isEmpty && (
                 <div style={{
                   backgroundColor: '#FFFFFF',
@@ -1221,10 +1195,10 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
           prospect={modal.prospect}
           stepKey={modal.stepKey}
           campaignCreatedAt={campaign.created_at}
-          campaignDelays={campaignDelays}
+          campaignDelays={mergedBaseDelays}
           onClose={() => setModal(null)}
           onSaved={handleEmailSaved}
-          isAdmin={isAdmin}
+          canEdit={isAdmin || modal.prospect.assigned_to === currentUserId}
         />
       )}
 
@@ -1240,6 +1214,7 @@ export default function SequenceTab({ prospects, campaign, isAdmin }: Props) {
             if (drawerProspect) setModal({ prospect: getEffective(drawerProspect), stepKey })
           }}
           isAdmin={isAdmin}
+          currentUserId={currentUserId}
         />
       )}
 

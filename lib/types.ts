@@ -16,11 +16,13 @@ export interface Campaign {
 export interface CampaignWithStats extends Campaign {
   totalProspects: number
   sentProspects: number
+  assignedReps: { userId: string; displayName: string }[]
 }
 
 export interface Prospect {
   id: string
   campaign_id: string
+  assigned_to: string | null
   full_name: string | null
   company: string | null
   industry: string | null
@@ -36,4 +38,20 @@ export interface Prospect {
   custom_emails: Record<string, { subject: string; body: string }> | null
   custom_delays: Record<string, number> | null
   created_at: string
+}
+
+export interface RepCampaignSettings {
+  id: string
+  campaign_id: string
+  user_id: string
+  sequence_delays: Record<string, number> | null
+  email_templates: Record<string, { subject: string; body: string }> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Profile {
+  id: string
+  role: 'admin' | 'staff'
+  display_name: string | null
 }

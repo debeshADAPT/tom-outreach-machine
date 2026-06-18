@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import type { Prospect, Campaign } from '@/lib/types'
 import { STEPS, STEP_ORDER, STEP_DEPTH } from '@/lib/sequence-steps'
 import { calculateStepDates, formatDDMMYY } from '@/lib/utils'
+import { deleteProspect } from '../actions'
 
 interface Props {
   prospect: Prospect
@@ -13,6 +14,7 @@ interface Props {
   onStageChange: (prospectId: string, step: string) => void
   onOpenEmailPreview: (stepKey: string) => void
   isAdmin: boolean
+  currentUserId: string
 }
 
 // MOCK DATA — replace with real Graph API reply content when integration is live
@@ -61,11 +63,15 @@ function Divider() {
   return <div style={{ borderTop: '1px solid #E5E5E5', margin: '20px 0' }} />
 }
 
-export default function ProspectDrawer({ prospect, campaign, onClose, onStageChange, onOpenEmailPreview, isAdmin }: Props) {
+export default function ProspectDrawer({ prospect, campaign, onClose, onStageChange, onOpenEmailPreview, isAdmin, currentUserId }: Props) {
   const [mounted, setMounted]           = useState(false)
   const [visible, setVisible]           = useState(false)
   const [currentStage, setCurrentStage] = useState(prospect.sequence_step)
   const [toast, setToast]               = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting]         = useState(false)
+
+  const canAct = isAdmin || prospect.assigned_to === currentUserId
 
   useEffect(() => {
     setMounted(true)
@@ -92,6 +98,18 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
     const label = ALL_STAGES.find(s => s.id === newStep)?.label ?? newStep
     setToast(`${toastPrefix} ${label}`)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await deleteProspect(prospect.id)
+      onClose()
+    } catch (err) {
+      console.error('Failed to delete prospect:', err)
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
   }
 
   const score = getMockMatchScore(prospect.id)
@@ -179,7 +197,6 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
 
-          {/* History tags — no section label */}
           {historyTags.length > 0 && (
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -196,7 +213,7 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
             </>
           )}
 
-          {/* Sequence Progress — clickable rows open email preview */}
+          {/* Sequence Progress */}
           <SectionLabel>Sequence Progress</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {STEP_ORDER.map((stepKey, i) => {
@@ -252,20 +269,20 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
 
           <Divider />
 
-          {/* Current Stage — styled dropdown */}
+          {/* Current Stage — owner or admin only */}
           <SectionLabel>Current Stage</SectionLabel>
           <select
             value={currentStage}
-            onChange={e => isAdmin && changeStage(e.target.value, 'Stage updated to')}
-            onFocus={e => { if (isAdmin) e.currentTarget.style.borderColor = '#E7534F' }}
+            onChange={e => canAct && changeStage(e.target.value, 'Stage updated to')}
+            onFocus={e => { if (canAct) e.currentTarget.style.borderColor = '#E7534F' }}
             onBlur={e => { e.currentTarget.style.borderColor = '#E5E5E5' }}
-            disabled={!isAdmin}
+            disabled={!canAct}
             style={{
               width: '100%', padding: '10px 12px', fontSize: '14px',
               color: '#0D0D0D', backgroundColor: '#FFFFFF',
               border: '1px solid #E5E5E5', borderRadius: '6px',
-              outline: 'none', cursor: isAdmin ? 'pointer' : 'default',
-              opacity: isAdmin ? 1 : 0.6,
+              outline: 'none', cursor: canAct ? 'pointer' : 'default',
+              opacity: canAct ? 1 : 0.6,
             }}
           >
             {ALL_STAGES.map(stage => (
@@ -273,8 +290,8 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
             ))}
           </select>
 
-          {/* Trigger Next Step button — admin only */}
-          {isAdmin && (
+          {/* Trigger Next Step — owner or admin only */}
+          {canAct && (
             <button
               onClick={nextStageObj ? () => changeStage(nextStageObj.id, 'Moved to') : undefined}
               disabled={!nextStageObj}
@@ -288,6 +305,59 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
             >
               {nextStageObj ? 'Trigger Next Step →' : 'Sequence Complete'}
             </button>
+          )}
+
+          {/* Delete prospect — owner or admin only */}
+          {canAct && (
+            <div style={{ marginTop: '12px' }}>
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{
+                    width: '100%', padding: '8px', border: '1px solid #FCA5A5',
+                    borderRadius: '6px', fontSize: '13px', color: '#DC2626',
+                    backgroundColor: '#FFFFFF', cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#FEF2F2' }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#FFFFFF' }}
+                >
+                  Delete prospect
+                </button>
+              ) : (
+                <div style={{
+                  border: '1px solid #FCA5A5', borderRadius: '6px',
+                  padding: '12px', backgroundColor: '#FEF2F2',
+                }}>
+                  <p style={{ fontSize: '13px', color: '#DC2626', margin: '0 0 10px', fontWeight: '500' }}>
+                    Delete this prospect? This cannot be undone.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      style={{
+                        flex: 1, padding: '7px', border: 'none', borderRadius: '5px',
+                        backgroundColor: '#DC2626', color: '#FFFFFF',
+                        fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                        opacity: deleting ? 0.6 : 1,
+                      }}
+                    >
+                      {deleting ? 'Deleting…' : 'Yes, delete'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      style={{
+                        flex: 1, padding: '7px', border: '1px solid #FCA5A5',
+                        borderRadius: '5px', backgroundColor: '#FFFFFF',
+                        color: '#DC2626', fontSize: '13px', cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <Divider />

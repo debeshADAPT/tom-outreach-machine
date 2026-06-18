@@ -7,13 +7,14 @@ import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Extension } from '@tiptap/core'
-import { saveCampaignTemplate } from '../actions'
-import type { Campaign } from '@/lib/types'
+import { saveCampaignTemplate, saveRepTemplate } from '../actions'
+import type { Campaign, RepCampaignSettings } from '@/lib/types'
 import { STEPS, type SequenceStep } from '@/lib/sequence-steps'
 
 interface Props {
   campaign: Campaign
   isAdmin: boolean
+  repSettings: RepCampaignSettings | null
 }
 
 // ─── Custom FontSize TipTap extension ────────────────────────────────────────
@@ -52,16 +53,31 @@ const toolbarBtnStyle: React.CSSProperties = {
   cursor: 'pointer', lineHeight: 1,
 }
 
-function SequenceTemplateCard({ step, campaign, isAdmin }: { step: SequenceStep; campaign: Campaign; isAdmin: boolean }) {
+function SequenceTemplateCard({
+  step,
+  campaign,
+  isAdmin,
+  repSettings,
+}: {
+  step: SequenceStep
+  campaign: Campaign
+  isAdmin: boolean
+  repSettings: RepCampaignSettings | null
+}) {
   const [expanded, setExpanded] = useState(false)
-  const [subject, setSubject] = useState(
-    campaign.email_templates?.[step.key]?.subject ?? step.subject
-  )
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const initBody = campaign.email_templates?.[step.key]?.body ?? step.body
-  const hasCustom = !!(campaign.email_templates?.[step.key])
+  // Admin: uses campaign defaults. Staff: uses their rep override, falls back to campaign default.
+  const effectiveTemplate = isAdmin
+    ? (campaign.email_templates?.[step.key] ?? null)
+    : (repSettings?.email_templates?.[step.key] ?? campaign.email_templates?.[step.key] ?? null)
+
+  const initSubject = effectiveTemplate?.subject ?? step.subject
+  const initBody    = effectiveTemplate?.body    ?? step.body
+  const hasCustom   = !!effectiveTemplate
+
+  const [subject, setSubject] = useState(initSubject)
 
   const editor = useEditor({
     extensions: [
@@ -84,7 +100,14 @@ function SequenceTemplateCard({ step, campaign, isAdmin }: { step: SequenceStep;
     setSaving(true)
     setSaved(false)
     try {
-      await saveCampaignTemplate(campaign.id, step.key, { subject, body: editor.getHTML() })
+      const email = { subject, body: editor.getHTML() }
+      if (isAdmin) {
+        // Admin saves to campaign-level defaults
+        await saveCampaignTemplate(campaign.id, step.key, email)
+      } else {
+        // Staff save to their own rep_campaign_settings
+        await saveRepTemplate(campaign.id, step.key, email)
+      }
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } finally {
@@ -122,18 +145,16 @@ function SequenceTemplateCard({ step, campaign, isAdmin }: { step: SequenceStep;
             ✎ customised
           </span>
         )}
-        {isAdmin && (
-          <button
-            onClick={e => { e.stopPropagation(); setExpanded(prev => !prev) }}
-            style={{
-              padding: '5px 12px', border: '1px solid #E5E5E5', borderRadius: '6px',
-              backgroundColor: expanded ? '#F7F6F3' : '#FFFFFF',
-              color: '#6B7280', fontSize: '12px', cursor: 'pointer', flexShrink: 0,
-            }}
-          >
-            {expanded ? 'Collapse' : 'Edit'}
-          </button>
-        )}
+        <button
+          onClick={e => { e.stopPropagation(); setExpanded(prev => !prev) }}
+          style={{
+            padding: '5px 12px', border: '1px solid #E5E5E5', borderRadius: '6px',
+            backgroundColor: expanded ? '#F7F6F3' : '#FFFFFF',
+            color: '#6B7280', fontSize: '12px', cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          {expanded ? 'Collapse' : 'Edit'}
+        </button>
       </div>
 
       {expanded && (
@@ -163,7 +184,9 @@ function SequenceTemplateCard({ step, campaign, isAdmin }: { step: SequenceStep;
           </div>
           <div style={{ padding: '10px 16px', backgroundColor: '#FAFAFA', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '12px', color: '#9CA3AF', flex: 1 }}>
-              Changes apply to all prospects without a custom email for this step.
+              {isAdmin
+                ? 'Changes apply to all prospects without a custom email for this step.'
+                : 'Changes apply to your prospects in this campaign.'}
             </span>
             <button
               onClick={handleSave}
@@ -176,7 +199,7 @@ function SequenceTemplateCard({ step, campaign, isAdmin }: { step: SequenceStep;
                 cursor: saving ? 'not-allowed' : 'pointer', flexShrink: 0,
               }}
             >
-              {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save template'}
+              {saving ? 'Saving…' : saved ? '✓ Saved' : isAdmin ? 'Save campaign default' : 'Save my template'}
             </button>
           </div>
         </div>
@@ -187,7 +210,7 @@ function SequenceTemplateCard({ step, campaign, isAdmin }: { step: SequenceStep;
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SettingsTab({ campaign, isAdmin }: Props) {
+export default function SettingsTab({ campaign, isAdmin, repSettings }: Props) {
   return (
     <div>
       <p style={{
@@ -198,10 +221,18 @@ export default function SettingsTab({ campaign, isAdmin }: Props) {
         Sequence Settings
       </p>
       <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>
-        Configure default delays and email templates for this campaign&apos;s outreach sequence.
+        {isAdmin
+          ? 'Configure campaign-level default email templates. These apply to all reps unless they set their own.'
+          : 'Customise your personal email templates for this campaign\'s outreach sequence.'}
       </p>
       {STEPS.map(step => (
-        <SequenceTemplateCard key={step.key} step={step} campaign={campaign} isAdmin={isAdmin} />
+        <SequenceTemplateCard
+          key={step.key}
+          step={step}
+          campaign={campaign}
+          isAdmin={isAdmin}
+          repSettings={repSettings}
+        />
       ))}
     </div>
   )

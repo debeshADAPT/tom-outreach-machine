@@ -11,3 +11,10 @@ export async function requireAdmin(): Promise<void> {
     .single()
   if (profile?.role !== 'admin') throw new Error('Unauthorized')
 }
+
+export async function requireAuth(): Promise<string> {
+  const supabase = await createSupabaseServer()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}

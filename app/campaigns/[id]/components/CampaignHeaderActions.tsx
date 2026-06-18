@@ -7,13 +7,12 @@ import { createSupabaseBrowser } from '@/lib/supabase-browser'
 import { exportCampaignData } from '@/lib/export-utils'
 import CampaignDetailsForm from './CampaignDetailsForm'
 import ImportModal from './ImportModal'
+import AssignRepsModal from './AssignRepsModal'
 
 interface Props {
   campaign: Campaign
   isAdmin: boolean
 }
-
-// ─── Cog icon ─────────────────────────────────────────────────────────────────
 
 function IconCog() {
   return (
@@ -23,8 +22,6 @@ function IconCog() {
   )
 }
 
-// ─── Prospects dropdown ───────────────────────────────────────────────────────
-
 interface DropdownPos { top: number; right: number }
 
 function ProspectsDropdown({
@@ -33,14 +30,12 @@ function ProspectsDropdown({
   campaignName,
   onImport,
   onClose,
-  isAdmin,
 }: {
   pos: DropdownPos
   campaignId: string
   campaignName: string
   onImport: () => void
   onClose: () => void
-  isAdmin: boolean
 }) {
   const [exporting, setExporting] = useState(false)
 
@@ -68,30 +63,22 @@ function ProspectsDropdown({
 
   return createPortal(
     <>
-      {/* Backdrop */}
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-        onClick={onClose}
-      />
-      {/* Dropdown */}
-      <div
-        style={{
-          position: 'fixed', top: pos.top, right: pos.right,
-          backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
-          borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
-          minWidth: '200px', zIndex: 100, padding: '4px 0', overflow: 'hidden',
-        }}
-      >
-        {isAdmin && (
-          <button
-            style={itemStyle}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F6F3')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-            onClick={() => { onClose(); onImport() }}
-          >
-            <span>↑</span> Add Prospects
-          </button>
-        )}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={onClose} />
+      <div style={{
+        position: 'fixed', top: pos.top, right: pos.right,
+        backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
+        borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
+        minWidth: '200px', zIndex: 100, padding: '4px 0', overflow: 'hidden',
+      }}>
+        {/* Add Prospects — visible to all assigned users */}
+        <button
+          style={itemStyle}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F6F3')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+          onClick={() => { onClose(); onImport() }}
+        >
+          <span>↑</span> Add Prospects
+        </button>
         <button
           style={{ ...itemStyle, opacity: exporting ? 0.6 : 1 }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F6F3')}
@@ -107,17 +94,15 @@ function ProspectsDropdown({
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export default function CampaignHeaderActions({ campaign, isAdmin }: Props) {
   const [cogOpen, setCogOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<DropdownPos>({ top: 0, right: 0 })
   const [importOpen, setImportOpen] = useState(false)
+  const [assignOpen, setAssignOpen] = useState(false)
   const [cogHovered, setCogHovered] = useState(false)
   const prospectsRef = useRef<HTMLButtonElement>(null)
 
-  // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') { setCogOpen(false); setDropdownOpen(false) }
@@ -136,10 +121,25 @@ export default function CampaignHeaderActions({ campaign, isAdmin }: Props) {
 
   return (
     <>
-      {/* Last updated */}
       <span style={{ fontSize: '12px', color: '#9CA3AF' }}>
         Last updated 2h ago 🔄
       </span>
+
+      {/* Assign Reps button — admin only */}
+      {isAdmin && (
+        <button
+          onClick={() => setAssignOpen(true)}
+          style={{
+            padding: '7px 14px', borderRadius: '7px', fontSize: '13px', fontWeight: '500',
+            border: '1px solid #E5E5E5', backgroundColor: '#FFFFFF', color: '#374151',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#9CA3AF' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5E5E5' }}
+        >
+          👤 Assign Reps
+        </button>
+      )}
 
       {/* Cog button — admin only */}
       {isAdmin && (
@@ -163,7 +163,7 @@ export default function CampaignHeaderActions({ campaign, isAdmin }: Props) {
         </button>
       )}
 
-      {/* Prospects ▾ button */}
+      {/* Prospects ▾ button — visible to all */}
       <button
         ref={prospectsRef}
         onClick={openDropdown}
@@ -176,7 +176,6 @@ export default function CampaignHeaderActions({ campaign, isAdmin }: Props) {
         Prospects ▾
       </button>
 
-      {/* Dropdown portal */}
       {dropdownOpen && (
         <ProspectsDropdown
           pos={dropdownPos}
@@ -184,16 +183,20 @@ export default function CampaignHeaderActions({ campaign, isAdmin }: Props) {
           campaignName={campaign.name}
           onImport={() => setImportOpen(true)}
           onClose={() => setDropdownOpen(false)}
-          isAdmin={isAdmin}
         />
       )}
 
-      {/* Import modal */}
       {importOpen && (
         <ImportModal campaignId={campaign.id} onClose={() => setImportOpen(false)} />
       )}
 
-      {/* Campaign Settings slide-in panel */}
+      {assignOpen && (
+        <AssignRepsModal
+          campaignId={campaign.id}
+          onClose={() => setAssignOpen(false)}
+        />
+      )}
+
       {cogOpen && createPortal(
         <>
           <div
