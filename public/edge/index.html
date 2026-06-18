@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ADAPT Edge — Delegate Prospecting Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+:root{
+  --red:#E7534F;--red-light:#FDF1F1;--red-border:rgba(231,83,79,0.18);
+  --black:#0A0A0A;--white:#FFFFFF;
+  --grey-50:#F8F8F8;--grey-100:#F0F0F0;--grey-200:#E4E4E4;--grey-500:#9A9A9A;--grey-700:#5F5F5F;
+  --green:#1A9B5F;--green-light:#EBF7F2;--green-border:rgba(26,155,95,0.25);
+  --amber:#C97B1A;--amber-light:#FEF6EA;--amber-border:rgba(201,123,26,0.2);
+  --blue:#2563EB;--blue-light:#EFF6FF;--blue-border:rgba(37,99,235,0.2);
+  --font:"DM Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --radius-sm:4px;--radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --shadow:0 1px 3px rgba(10,10,10,0.06),0 0 0 0.5px rgba(10,10,10,0.08);
+  --shadow-md:0 4px 12px rgba(10,10,10,0.08),0 0 0 0.5px rgba(10,10,10,0.06);
+  --shadow-lg:0 8px 28px rgba(10,10,10,0.12),0 0 0 0.5px rgba(10,10,10,0.06);
+  --t:160ms cubic-bezier(0.16,1,0.3,1);
+}
+body{font-family:var(--font);background:var(--grey-50);color:var(--black);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── Top bar ── */
+.top-bar{background:var(--black);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:30px;height:30px;background:var(--red);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:-0.02em}
+.brand-name{font-size:13px;font-weight:600;color:#fff;letter-spacing:-0.01em}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.35);margin-left:8px;letter-spacing:0.06em;text-transform:uppercase}
+.top-bar-right{display:flex;align-items:center;gap:8px}
+.btn-ghost-inv{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius);border:1px solid rgba(255,255,255,0.12);background:transparent;font-family:var(--font);font-size:11px;font-weight:600;color:rgba(255,255,255,0.55);cursor:pointer;transition:all var(--t)}
+.btn-ghost-inv:hover{border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.9)}
+
+/* ── Layout shell ── */
+.shell{display:flex;height:calc(100vh - 56px);overflow:hidden}
+
+/* ── Left sidebar (results only) ── */
+.sidebar{width:280px;flex-shrink:0;background:var(--white);border-right:1px solid var(--grey-200);display:flex;flex-direction:column;overflow:hidden;transition:width var(--t)}
+.sidebar.hidden{width:0}
+.sidebar-inner{width:280px;flex-shrink:0;display:flex;flex-direction:column;height:100%;overflow:hidden}
+
+/* Dashboard stats strip */
+.dash-stats{padding:1.25rem 1rem;border-bottom:1px solid var(--grey-100)}
+.dash-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-500);margin-bottom:12px}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-tile{padding:10px;background:var(--grey-50);border-radius:var(--radius);border:1px solid var(--grey-100)}
+.stat-n{font-size:22px;font-weight:700;letter-spacing:-0.04em;line-height:1;margin-bottom:3px}
+.stat-n.red{color:var(--red)}
+.stat-n.amber{color:var(--amber)}
+.stat-n.grey{color:var(--grey-500)}
+.stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--grey-500)}
+.stat-total{padding:8px 10px;background:var(--black);border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.stat-total-n{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.03em}
+.stat-total-lbl{font-size:10px;color:rgba(255,255,255,0.45);font-weight:600}
+
+/* Heat bar */
+.heat-bar-wrap{margin-top:10px}
+.heat-bar{height:5px;border-radius:3px;background:var(--grey-100);display:flex;overflow:hidden;gap:1px}
+.heat-seg{height:100%;transition:width 0.6s cubic-bezier(0.16,1,0.3,1)}
+.heat-seg.hot{background:var(--red)}
+.heat-seg.warm{background:var(--amber)}
+.heat-seg.cool{background:var(--grey-200)}
+.heat-legend{display:flex;gap:10px;margin-top:6px}
+.heat-leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--grey-500)}
+.heat-dot{width:6px;height:6px;border-radius:50%}
+
+/* Nav list */
+.sidebar-nav{flex:1;overflow-y:auto;padding:0.5rem}
+.nav-section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-500);padding:8px 8px 4px}
+.prospect-nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:background var(--t);margin-bottom:2px}
+.prospect-nav-item:hover{background:var(--grey-50)}
+.prospect-nav-item.active{background:var(--red-light)}
+.prospect-nav-item.active .nav-name{color:var(--red)}
+.nav-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.nav-avatar.hot{background:var(--red-light);color:var(--red);border:1.5px solid var(--red-border)}
+.nav-avatar.warm{background:var(--amber-light);color:var(--amber);border:1.5px solid var(--amber-border)}
+.nav-avatar.cool{background:var(--grey-100);color:var(--grey-700);border:1.5px solid var(--grey-200)}
+.nav-avatar.loading{background:var(--grey-100);color:var(--grey-500)}
+.nav-name{font-size:12px;font-weight:600;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.nav-meta{font-size:10px;color:var(--grey-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.nav-status{flex-shrink:0;width:7px;height:7px;border-radius:50%}
+.nav-status.done{background:var(--green)}
+.nav-status.loading{background:var(--amber);animation:pulse 1s infinite}
+.nav-status.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* Nav heat badge */
+.nav-heat{font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;flex-shrink:0}
+.nav-heat.hot{background:var(--red-light);color:var(--red)}
+.nav-heat.warm{background:var(--amber-light);color:var(--amber)}
+.nav-heat.cool{background:var(--grey-100);color:var(--grey-700)}
+
+/* Sidebar toggle */
+.sidebar-toggle{position:absolute;left:280px;top:50%;transform:translateY(-50%);width:20px;height:44px;background:var(--white);border:1px solid var(--grey-200);border-left:none;border-radius:0 6px 6px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--grey-500);z-index:10;transition:all var(--t)}
+.sidebar-toggle:hover{background:var(--grey-50);color:var(--black)}
+
+/* ── Main scroll area ── */
+.main-scroll{flex:1;overflow-y:auto;padding:2rem 2.5rem 6rem;position:relative}
+@media(max-width:900px){.main-scroll{padding:1.25rem 1rem 5rem}}
+
+/* ── Form view ── */
+.form-wrap{max-width:900px;margin:0 auto}
+.card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:1.5rem;margin-bottom:1.25rem}
+.eyebrow{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--grey-500);margin-bottom:1rem}
+.eyebrow-n{width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+.field{margin-bottom:1rem}
+.field:last-child{margin-bottom:0}
+label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--grey-700);margin-bottom:5px}
+.hint{font-size:11px;color:var(--grey-500);margin-top:4px;line-height:1.5}
+input,select,textarea{width:100%;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--grey-200);background:var(--white);color:var(--black);font-family:var(--font);font-size:14px;line-height:1.5;transition:border-color var(--t),box-shadow var(--t);-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px var(--red-border)}
+select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239A9A9A' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+textarea{resize:vertical;min-height:96px}
+.divider{height:1px;background:var(--grey-100);margin:1.1rem 0}
+
+/* Chips */
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.chip{padding:5px 11px;border-radius:20px;border:1px solid var(--grey-200);background:var(--white);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all var(--t);color:var(--grey-700);user-select:none}
+.chip:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
+.chip.on{background:var(--red-light);border-color:var(--red-border);color:var(--red);font-weight:600}
+.chip.on::before{content:"✓  ";font-size:10px}
+
+/* Service tiles */
+.svc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+@media(max-width:700px){.svc-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:400px){.svc-grid{grid-template-columns:1fr}}
+.svc{padding:10px 12px;border-radius:var(--radius);border:1px solid var(--grey-200);background:var(--white);cursor:pointer;transition:all var(--t)}
+.svc:hover{border-color:var(--red-border);background:var(--red-light)}
+.svc.on{border-color:var(--red-border);background:var(--red-light)}
+.svc-name{font-size:12px;font-weight:600;color:var(--black)}
+.svc-sub{font-size:10px;color:var(--grey-500);margin-top:2px;line-height:1.4}
+
+/* Buttons */
+.btn-primary{display:block;width:100%;padding:14px;border-radius:var(--radius);background:var(--red);color:#fff;border:none;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:opacity var(--t),transform var(--t);margin-top:0.75rem}
+.btn-primary:hover{opacity:0.9}
+.btn-primary:active{transform:scale(0.99)}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed}
+.btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--grey-200);background:var(--white);font-family:var(--font);font-size:12px;font-weight:500;color:var(--grey-700);cursor:pointer;transition:all var(--t)}
+.btn-ghost:hover{border-color:var(--red-border);color:var(--red);background:var(--red-light)}
+.btn-sm{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--grey-200);background:var(--white);font-family:var(--font);font-size:11px;font-weight:600;color:var(--grey-700);cursor:pointer;transition:all var(--t)}
+.btn-sm:hover{border-color:var(--red-border);color:var(--red);background:var(--red-light)}
+.btn-sm.copied{background:var(--red);border-color:var(--red);color:#fff}
+
+.error-box{background:var(--red-light);border:1px solid var(--red-border);color:var(--red);padding:11px 14px;border-radius:var(--radius);font-size:13px;margin-top:0.75rem;display:none}
+
+/* Skeleton */
+.skeleton{background:linear-gradient(90deg,var(--grey-100) 25%,var(--grey-50) 50%,var(--grey-100) 75%);background-size:200% 100%;animation:shimmer 1.4s linear infinite;border-radius:var(--radius-sm)}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+
+/* API key screen */
+.apikey-wrap{max-width:520px;margin:5rem auto;text-align:center}
+.apikey-mark{width:56px;height:56px;background:var(--red);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:20px;font-weight:800;color:#fff}
+.apikey-title{font-size:22px;font-weight:700;letter-spacing:-0.03em;margin-bottom:0.5rem}
+.apikey-sub{font-size:14px;color:var(--grey-500);line-height:1.6;margin-bottom:2rem}
+.apikey-link{color:var(--red);text-decoration:none;font-weight:600}
+.apikey-link:hover{text-decoration:underline}
+
+/* Mode switcher */
+.mode-switch{display:flex;gap:0;margin-bottom:1.25rem;border:1px solid var(--grey-200);border-radius:var(--radius);overflow:hidden;background:var(--grey-50)}
+.mode-btn{flex:1;padding:9px 12px;border:none;background:transparent;font-family:var(--font);font-size:12px;font-weight:600;color:var(--grey-500);cursor:pointer;transition:all var(--t);text-align:center}
+.mode-btn:first-child{border-right:1px solid var(--grey-200)}
+.mode-btn.active{background:var(--black);color:#fff}
+.mode-btn:not(.active):hover{background:var(--grey-100);color:var(--black)}
+.mode-panel{display:none}
+.mode-panel.active{display:block}
+.clay-contact-item{background:var(--grey-50);border:1px solid var(--grey-200);border-radius:var(--radius);padding:10px 12px;position:relative;margin-bottom:6px}
+.clay-contact-item.has-signals{border-color:var(--red-border);background:var(--red-light)}
+.clay-contact-name{font-size:13px;font-weight:600;color:var(--black)}
+.clay-contact-meta{font-size:11px;color:var(--grey-500);margin-top:2px}
+.clay-contact-sig{font-size:10px;color:var(--red);font-weight:600;margin-top:4px}
+.clay-remove{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--grey-500);cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;border-radius:3px}
+.clay-remove:hover{color:var(--red);background:var(--red-light)}
+.clay-add-btn{width:100%;padding:10px;border:1.5px dashed var(--grey-200);border-radius:var(--radius);background:transparent;font-family:var(--font);font-size:12px;font-weight:600;color:var(--grey-500);cursor:pointer;transition:all var(--t);margin-top:4px}
+.clay-add-btn:hover{border-color:var(--red-border);color:var(--red);background:var(--red-light)}
+
+/* CSV dropzone */
+#csv-dropzone{padding:1.5rem;border:1.5px dashed var(--grey-200);border-radius:var(--radius);cursor:pointer;transition:all var(--t);text-align:center;background:var(--grey-50)}
+#csv-dropzone:hover{border-color:var(--red-border);background:var(--red-light)}
+
+/* Modals */
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,10,10,0.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal{background:var(--white);border-radius:var(--radius-xl);padding:1.5rem;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(10,10,10,0.3)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--grey-500);margin-bottom:1rem;line-height:1.55}
+.modal-actions{display:flex;gap:8px;margin-top:1rem}
+.modal-actions .btn-primary{margin-top:0}
+.btn-cancel{padding:12px 20px;border-radius:var(--radius);border:1px solid var(--grey-200);background:var(--white);font-family:var(--font);font-size:14px;font-weight:600;color:var(--grey-700);cursor:pointer}
+
+/* ── Results header ── */
+.results-bar{background:var(--white);border-bottom:1px solid var(--grey-200);padding:0 2.5rem;height:52px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-shrink:0}
+.results-title{font-size:15px;font-weight:700;letter-spacing:-0.02em}
+.results-sub{font-size:12px;color:var(--grey-500);margin-left:10px}
+.results-bar-right{display:flex;align-items:center;gap:8px}
+
+/* Conf banner */
+.conf-banner{background:var(--black);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:2rem}
+.conf-name{font-size:17px;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:5px}
+.conf-desc{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6}
+.conf-themes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.conf-theme{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:3px 8px;background:rgba(255,255,255,0.07);border:0.5px solid rgba(255,255,255,0.12);border-radius:4px;color:rgba(255,255,255,0.55)}
+
+/* ═══════════════════════════════════════════
+   PROSPECT CARD — FULL WIDTH REDESIGN
+   ═══════════════════════════════════════════ */
+
+.prospect-card{background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow);margin-bottom:2.5rem;overflow:hidden;transition:box-shadow var(--t);scroll-margin-top:1.5rem}
+.prospect-card:hover{box-shadow:var(--shadow-md)}
+
+/* ── Card: Header ── */
+.pc-head{padding:1.5rem 2rem;display:flex;align-items:flex-start;gap:1.25rem;border-bottom:1px solid var(--grey-100)}
+.avatar{width:52px;height:52px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
+.avatar.hot{background:var(--red-light);border:2px solid var(--red-border);color:var(--red)}
+.avatar.warm{background:var(--amber-light);border:2px solid var(--amber-border);color:var(--amber)}
+.avatar.cool{background:var(--grey-100);border:2px solid var(--grey-200);color:var(--grey-700)}
+.pc-name{font-size:20px;font-weight:700;letter-spacing:-0.025em;line-height:1.2}
+.pc-meta{font-size:13px;color:var(--grey-700);margin-top:3px}
+.pc-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.tag{font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-sm);border:1px solid var(--grey-200);color:var(--grey-700);background:var(--grey-50)}
+.tag.red{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.tag.warn{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber)}
+.pc-head-right{margin-left:auto;flex-shrink:0;display:flex;gap:8px;align-items:flex-start}
+
+/* ── Card: Two-column score strip ── */
+.score-strip{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--grey-100)}
+.score-col{padding:1.5rem 2rem;display:flex;align-items:center;gap:1.25rem}
+.score-col:first-child{border-right:1px solid var(--grey-100)}
+.gauge-wrap{position:relative;width:80px;height:80px;flex-shrink:0}
+.gauge-wrap svg{transform:rotate(-90deg)}
+.gauge-track{fill:none;stroke:var(--grey-100);stroke-width:8;stroke-linecap:round}
+.gauge-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 0.9s cubic-bezier(0.16,1,0.3,1)}
+.gauge-fill.hot{stroke:var(--red)}
+.gauge-fill.warm{stroke:var(--amber)}
+.gauge-fill.cool{stroke:var(--grey-200)}
+.gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.gauge-num{font-size:20px;font-weight:700;letter-spacing:-0.04em;line-height:1}
+.gauge-num.hot{color:var(--red)}
+.gauge-num.warm{color:var(--amber)}
+.gauge-num.cool{color:var(--grey-500)}
+.score-content{flex:1;min-width:0}
+.score-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-500);margin-bottom:5px}
+.heat-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:8px}
+.heat-pill.hot{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.heat-pill.warm{background:var(--amber-light);color:var(--amber);border:1px solid var(--amber-border)}
+.heat-pill.cool{background:var(--grey-100);color:var(--grey-700);border:1px solid var(--grey-200)}
+.heat-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.heat-dot.hot{background:var(--red)}
+.heat-dot.warm{background:var(--amber)}
+.heat-dot.cool{background:var(--grey-500)}
+.score-reasoning{font-size:12.5px;color:var(--grey-700);line-height:1.6}
+
+/* ── Card: Three-column body ── */
+.pc-body{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--grey-100)}
+@media(max-width:960px){.pc-body{grid-template-columns:1fr}}
+.pc-col{padding:1.5rem 2rem}
+.pc-col:not(:last-child){border-right:1px solid var(--grey-100)}
+@media(max-width:960px){.pc-col:not(:last-child){border-right:none;border-bottom:1px solid var(--grey-100)}}
+.pc-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-500);margin-bottom:1rem;display:flex;align-items:center;gap:6px}
+.pc-col-title-icon{width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px}
+.pc-col-title-icon.red{background:var(--red-light);color:var(--red)}
+.pc-col-title-icon.amber{background:var(--amber-light);color:var(--amber)}
+.pc-col-title-icon.blue{background:var(--blue-light);color:var(--blue)}
+
+/* Signals list */
+.signal-list{display:flex;flex-direction:column;gap:0}
+.signal-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--grey-100)}
+.signal-item:last-child{border-bottom:none}
+.sig-dot{width:5px;height:5px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:5px}
+.sig-label{font-size:12.5px;font-weight:600;line-height:1.3}
+.sig-detail{font-size:11.5px;color:var(--grey-500);margin-top:2px;line-height:1.5}
+
+/* Why attend */
+.why-attend-block{padding:10px 12px;border-radius:var(--radius);background:var(--red-light);border:1px solid var(--red-border);margin-bottom:8px}
+.why-attend-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--red);margin-bottom:5px}
+.why-attend-text{font-size:12.5px;color:var(--black);line-height:1.6}
+
+/* Services column */
+.rec-service-block{padding:10px 12px;border-radius:var(--radius);background:var(--grey-50);border:1px solid var(--grey-200);margin-bottom:8px}
+.rec-service-name{font-size:12px;font-weight:700;color:var(--black);margin-bottom:3px}
+.rec-service-reasoning{font-size:12px;color:var(--grey-700);line-height:1.6}
+
+/* Service menu */
+.service-menu{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.service-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--radius-sm);border:1px solid var(--grey-200);background:var(--white);font-size:11.5px;font-weight:500;color:var(--grey-700)}
+.service-item.primary{border-color:var(--red-border);background:var(--red-light);color:var(--red);font-weight:600}
+.service-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.service-dot.primary{background:var(--red)}
+.service-dot.secondary{background:var(--grey-300)}
+
+/* Stale contact warning */
+.stale-warn{display:flex;gap:10px;align-items:flex-start;padding:10px 2rem;background:var(--amber-light);border-bottom:1px solid var(--amber-border);font-size:12px;color:var(--amber);line-height:1.5}
+.stale-warn strong{display:block;font-weight:700;margin-bottom:2px}
+.stale-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* ── Card: Outreach section ── */
+.outreach-section{border-top:none}
+.outreach-header{padding:0.75rem 2rem;background:var(--grey-50);border-top:1px solid var(--grey-100);border-bottom:1px solid var(--grey-100);display:flex;align-items:center;justify-content:space-between}
+.outreach-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-500)}
+.tab-bar{padding:0 2rem;display:flex;flex-wrap:wrap;gap:5px;background:var(--white);border-bottom:1px solid var(--grey-100);padding-top:0.75rem;padding-bottom:0.75rem}
+.tab{padding:5px 12px;border-radius:20px;border:1px solid var(--grey-200);background:var(--grey-50);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all var(--t);color:var(--grey-700)}
+.tab:hover{border-color:var(--red-border);color:var(--red)}
+.tab.active{background:var(--black);border-color:var(--black);color:#fff}
+.tab-pane{display:none;padding:1.5rem 2rem}
+.tab-pane.active{display:block;animation:fadeUp 0.2s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.subj-row{font-size:12px;font-weight:600;color:var(--grey-500);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--grey-100)}
+.subj-row span{color:var(--black);font-weight:600;font-size:13px}
+.body-box{background:var(--grey-50);border:1px solid var(--grey-200);border-radius:var(--radius);padding:1.25rem 1.5rem;font-size:13.5px;line-height:1.85;white-space:pre-wrap;color:var(--black);font-family:var(--font)}
+.copy-row{margin-top:10px;display:flex;align-items:center;gap:10px}
+.wc{font-size:11px;color:var(--grey-500)}
+
+/* Clay panel */
+.clay-panel{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-top:2rem}
+.clay-head{background:var(--black);padding:1rem 1.5rem;display:flex;align-items:center;gap:10px}
+.clay-head-title{font-size:14px;font-weight:700;color:#fff}
+.clay-badge{font-size:10px;padding:2px 8px;background:rgba(255,255,255,0.1);border-radius:10px;color:rgba(255,255,255,0.65);font-weight:600;letter-spacing:0.05em;text-transform:uppercase}
+.clay-body{padding:1.25rem 1.5rem}
+.clay-intro{font-size:13px;color:var(--grey-700);line-height:1.65;margin-bottom:1rem}
+.clay-why{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem}
+@media(max-width:600px){.clay-why{grid-template-columns:1fr}}
+.clay-why-item{padding:10px 12px;background:var(--grey-50);border-radius:var(--radius);border:1px solid var(--grey-200)}
+.clay-why-label{font-size:11px;font-weight:700;color:var(--red);margin-bottom:3px}
+.clay-why-text{font-size:12px;color:var(--grey-700);line-height:1.5}
+.clay-steps{list-style:none}
+.clay-step{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--grey-100);font-size:13px;color:var(--grey-700);line-height:1.5}
+.clay-step:last-child{border-bottom:none}
+.clay-n{font-size:12px;font-weight:700;color:var(--red);flex-shrink:0;width:16px;padding-top:1px}
+
+
+/* ═══════════════════════════════════════════
+   TOOL SWITCHER (top-level tabs)
+   ═══════════════════════════════════════════ */
+.tool-switcher{background:var(--black);border-bottom:1px solid rgba(255,255,255,0.07);padding:0 2rem;display:flex;gap:0;height:40px;align-items:flex-end}
+.tool-tab{padding:0 18px;height:36px;display:flex;align-items:center;font-family:var(--font);font-size:12px;font-weight:600;color:rgba(255,255,255,0.4);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;transition:all var(--t);gap:6px;white-space:nowrap}
+.tool-tab:hover{color:rgba(255,255,255,0.75)}
+.tool-tab.active{color:#fff;border-bottom-color:var(--red)}
+.tool-icon{font-size:13px}
+
+/* ═══════════════════════════════════════════
+   RE-ENGAGEMENT TOOL
+   ═══════════════════════════════════════════ */
+
+/* Contact list tabs (Edge vs Roundtable) */
+.list-tabs{display:flex;border:1px solid var(--grey-200);border-radius:var(--radius);overflow:hidden;background:var(--grey-50);margin-bottom:1rem}
+.list-tab{flex:1;padding:8px 12px;border:none;background:transparent;font-family:var(--font);font-size:12px;font-weight:600;color:var(--grey-500);cursor:pointer;transition:all var(--t);text-align:center;position:relative}
+.list-tab:first-child{border-right:1px solid var(--grey-200)}
+.list-tab.active{background:var(--white);color:var(--black)}
+.list-tab .list-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;font-weight:700;margin-left:6px}
+.list-tab:not(.active) .list-count{background:var(--grey-200);color:var(--grey-700)}
+
+/* Contact input panel */
+.contact-input-panel{display:none}
+.contact-input-panel.active{display:block}
+
+/* Contact rows */
+.contact-row{display:grid;grid-template-columns:1fr 1fr 1.4fr 100px 1.6fr 32px;gap:7px;align-items:center;margin-bottom:6px}
+.contact-row input{margin:0;padding:7px 10px;font-size:12.5px}
+.contact-row .del-btn{width:32px;height:32px;border-radius:var(--radius-sm);border:1px solid var(--grey-200);background:var(--white);color:var(--grey-500);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:all var(--t)}
+.contact-row .del-btn:hover{border-color:var(--red-border);color:var(--red);background:var(--red-light)}
+.contact-row-header{display:grid;grid-template-columns:1fr 1fr 1.4fr 100px 1.6fr 32px;gap:7px;margin-bottom:4px}
+.contact-row-header span{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--grey-500)}
+
+/* CSV dropzone for re-engagement (ID-specific to avoid conflict) */
+#re-csv-dropzone{padding:1.25rem;border:1.5px dashed var(--grey-200);border-radius:var(--radius);cursor:pointer;transition:all var(--t);text-align:center;background:var(--grey-50);margin-bottom:8px}
+#re-csv-dropzone:hover{border-color:var(--red-border);background:var(--red-light)}
+
+.add-contact-btn{width:100%;padding:8px;border:1.5px dashed var(--grey-200);border-radius:var(--radius);background:transparent;font-family:var(--font);font-size:12px;font-weight:600;color:var(--grey-500);cursor:pointer;transition:all var(--t);margin-top:4px}
+.add-contact-btn:hover{border-color:var(--red-border);color:var(--red);background:var(--red-light)}
+
+/* Microsite content box */
+.microsite-box{width:100%;padding:10px 12px;border-radius:var(--radius);border:1px solid var(--grey-200);background:var(--white);color:var(--black);font-family:var(--font);font-size:13px;line-height:1.6;resize:vertical;min-height:180px;transition:border-color var(--t),box-shadow var(--t)}
+.microsite-box:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px var(--red-border)}
+
+/* Re-engagement results */
+.re-results-wrap{max-width:1000px;margin:0 auto}
+
+/* Re-engagement card */
+.re-card{background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow);margin-bottom:2rem;overflow:hidden;scroll-margin-top:1.5rem;transition:box-shadow var(--t)}
+.re-card:hover{box-shadow:var(--shadow-md)}
+.re-card-head{padding:1.25rem 1.75rem;display:flex;align-items:center;gap:1rem;border-bottom:1px solid var(--grey-100)}
+.re-avatar{width:44px;height:44px;border-radius:50%;flex-shrink:0;background:var(--red-light);border:2px solid var(--red-border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--red)}
+.re-name{font-size:17px;font-weight:700;letter-spacing:-0.02em}
+.re-meta{font-size:12.5px;color:var(--grey-700);margin-top:2px}
+.re-badge{font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid var(--red-border);background:var(--red-light);color:var(--red);margin-left:auto;flex-shrink:0}
+.re-badge.roundtable{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.re-hubspot{font-size:10px;color:var(--grey-500);margin-top:2px}
+.re-hubspot a{color:var(--grey-500);text-decoration:none}
+.re-hubspot a:hover{color:var(--red)}
+
+/* Conference context strip */
+.re-conf-strip{padding:0.875rem 1.75rem;background:var(--grey-50);border-bottom:1px solid var(--grey-100);display:flex;gap:1.5rem;flex-wrap:wrap}
+.re-conf-item{font-size:11.5px;color:var(--grey-700)}
+.re-conf-item strong{color:var(--black);font-weight:600}
+
+/* Asset tabs — re-engagement (prefixed to avoid clash) */
+.re-tab-bar{padding:0.75rem 1.75rem;display:flex;flex-wrap:wrap;gap:5px;background:var(--white);border-bottom:1px solid var(--grey-100)}
+.re-tab{padding:5px 12px;border-radius:20px;border:1px solid var(--grey-200);background:var(--grey-50);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all var(--t);color:var(--grey-700)}
+.re-tab:hover{border-color:var(--red-border);color:var(--red)}
+.re-tab.active{background:var(--black);border-color:var(--black);color:#fff}
+.re-tab-pane{display:none;padding:1.25rem 1.75rem}
+.re-tab-pane.active{display:block;animation:fadeUp 0.2s ease both}
+
+/* Re-engagement sidebar nav */
+.re-nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:background var(--t);margin-bottom:2px}
+.re-nav-item:hover{background:var(--grey-50)}
+.re-nav-item.active{background:var(--red-light)}
+.re-nav-item.active .nav-name{color:var(--red)}
+
+/* Re-engagement summary bar */
+.re-summary-bar{display:flex;gap:1rem;padding:1rem 1.75rem;background:var(--black);border-radius:var(--radius-lg);margin-bottom:1.5rem}
+.re-sum-item{text-align:center}
+.re-sum-n{font-size:24px;font-weight:700;color:#fff;letter-spacing:-0.04em;line-height:1}
+.re-sum-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.4);margin-top:3px}
+.re-sum-divider{width:1px;background:rgba(255,255,255,0.08);flex-shrink:0}
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ TOP BAR ═══════════════ -->
+<div class="top-bar">
+  <div class="brand">
+    <div class="brand-mark">AE</div>
+    <span class="brand-name">ADAPT Edge</span>
+    <span class="brand-sub">Delegate Tools</span>
+  </div>
+  <div class="top-bar-right">
+    <button class="btn-ghost-inv" id="topbar-new-run" onclick="handleNewRun()">← New Run</button>
+    <button class="btn-ghost-inv" onclick="showView('apikey')">⚙ API Key</button>
+  </div>
+</div>
+
+<!-- ═══════════════ TOOL SWITCHER ═══════════════ -->
+<div class="tool-switcher" id="tool-switcher">
+  <button class="tool-tab active" id="tool-tab-prospector" onclick="switchTool('prospector')">
+    <span class="tool-icon">🔍</span> Prospect Research
+  </button>
+  <button class="tool-tab" id="tool-tab-reengagement" onclick="switchTool('reengagement')">
+    <span class="tool-icon">✉️</span> Re-engagement Copy Writer
+  </button>
+</div>
+
+<!-- ═══════════════ VIEWS ═══════════════ -->
+
+<!-- API KEY VIEW -->
+<div id="view-apikey" style="display:none">
+  <div class="shell" style="display:block;overflow-y:auto">
+    <div class="main-scroll" style="padding-top:3rem">
+      <div class="apikey-wrap">
+        <div class="apikey-mark">AE</div>
+        <h1 class="apikey-title">Welcome to ADAPT Edge</h1>
+        <p class="apikey-sub">Enter your Anthropic API key to get started. It's saved in your browser only and never sent anywhere else.</p>
+        <div class="card">
+          <div class="field">
+            <label>Anthropic API Key</label>
+            <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off"/>
+          </div>
+          <p class="hint">Get your key at <a href="https://console.anthropic.com" target="_blank" class="apikey-link">console.anthropic.com</a></p>
+          <div id="apikey-error" class="error-box"></div>
+          <button class="btn-primary" onclick="saveApiKey()">Save Key & Continue →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FORM VIEW -->
+<div id="view-form" style="display:none">
+  <div class="shell" style="display:block;overflow-y:auto">
+    <div class="main-scroll">
+      <div class="form-wrap">
+
+        <div class="card">
+          <div class="eyebrow"><div class="eyebrow-n">1</div>Conference Selection</div>
+          <div class="grid2">
+            <div class="field">
+              <label>Edge Conference</label>
+              <select id="conf-select">
+                <option value="">Select a conference...</option>
+                <option>CIO Edge Sydney</option>
+                <option>CIO Edge Melbourne</option>
+                <option>Data &amp; AI Edge Sydney</option>
+                <option>Government Edge Canberra</option>
+                <option>Digital &amp; AI Edge Sydney</option>
+                <option>Security Edge Sydney</option>
+                <option>Security Edge Melbourne</option>
+                <option>Cloud &amp; Infrastructure Edge Sydney</option>
+                <option>People &amp; AI Edge Sydney</option>
+                <option>CFO Edge Sydney</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Conference Microsite URL <span style="font-weight:400;color:var(--grey-500)">(optional)</span></label>
+              <input type="url" id="conf-url" placeholder="https://ciodge.adaptconferences.com.au/..."/>
+              <p class="hint">Paste the event URL to pull live agenda and themes into the copy</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="eyebrow"><div class="eyebrow-n">2</div>Target Contacts</div>
+          <div class="mode-switch">
+            <button class="mode-btn active" id="mode-btn-research" onclick="switchMode('research')">🔍 Company Research Mode</button>
+            <button class="mode-btn" id="mode-btn-clay" onclick="switchMode('clay')">⬡ Clay CSV Mode</button>
+          </div>
+
+          <!-- Research mode -->
+          <div class="mode-panel active" id="mode-research">
+            <div class="field">
+              <label>Target Companies</label>
+              <textarea id="companies-input" style="min-height:120px" placeholder="Westpac Group&#10;Commonwealth Bank of Australia&#10;Telstra&#10;NSW Department of Finance&#10;Woolworths Group"></textarea>
+              <p class="hint">One company per line. Claude will identify the right person in your target role.</p>
+            </div>
+            <div class="field">
+              <label>Target Roles</label>
+              <p class="hint" style="margin-bottom:6px">Select the roles you want Claude to locate</p>
+              <div class="chips" id="roles-grid">
+                <div class="chip on" data-val="CIO">CIO</div>
+                <div class="chip" data-val="CISO">CISO</div>
+                <div class="chip" data-val="CTO">CTO</div>
+                <div class="chip" data-val="CDO">CDO (Data)</div>
+                <div class="chip" data-val="CFO">CFO</div>
+                <div class="chip" data-val="CPO">CPO</div>
+                <div class="chip" data-val="COO">COO</div>
+                <div class="chip" data-val="CHRO">CHRO</div>
+                <div class="chip" data-val="Head of Data">Head of Data</div>
+                <div class="chip" data-val="Head of Security">Head of Security</div>
+                <div class="chip" data-val="Head of Digital">Head of Digital</div>
+                <div class="chip" data-val="Head of Cloud">Head of Cloud</div>
+                <div class="chip" data-val="Head of AI">Head of AI</div>
+                <div class="chip" data-val="GM Technology">GM Technology</div>
+                <div class="chip" data-val="EGM Technology">EGM Technology</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clay mode -->
+          <div class="mode-panel" id="mode-clay">
+            <div class="field">
+              <label>Upload Clay CSV</label>
+              <div id="csv-dropzone" onclick="document.getElementById('csv-file-input').click()" style="cursor:pointer">
+                <div style="font-size:20px;margin-bottom:6px">⬡</div>
+                <div style="font-size:13px;font-weight:600;color:var(--grey-700)">Drop CSV here or click to browse</div>
+                <div style="font-size:11px;color:var(--grey-500);margin-top:4px">Expects: First Name, Last Name, Job Title, Company Name, Work Email, LinkedIn URL, Location, Transformation Readiness Signals</div>
+              </div>
+              <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleCsvFile(this.files[0])"/>
+            </div>
+            <div id="clay-row-controls" style="display:none;margin-bottom:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
+                <div>
+                  <span id="clay-count-label" style="font-size:12px;font-weight:600;color:var(--black)"></span>
+                  <span id="clay-signals-label" style="font-size:11px;color:var(--green);margin-left:8px"></span>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn-sm" onclick="selectAllClay(true)">Select all</button>
+                  <button class="btn-sm" onclick="selectAllClay(false)">Deselect all</button>
+                </div>
+              </div>
+            </div>
+            <div id="clay-contacts-list"></div>
+            <button class="clay-add-btn" onclick="openClayModal()">+ Add contact manually</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="eyebrow"><div class="eyebrow-n">3</div>ADAPT Services Assessment</div>
+          <p class="hint" style="margin-bottom:10px">Which services should Claude evaluate fit for? Select all relevant.</p>
+          <div class="svc-grid" id="svc-grid">
+            <div class="svc on" data-val="Executive Advisory">
+              <div class="svc-name">Executive Advisory</div>
+              <div class="svc-sub">Ongoing C-suite advisory retainer</div>
+            </div>
+            <div class="svc on" data-val="Strategic Research & Benchmarks">
+              <div class="svc-name">Strategic Research & Benchmarks</div>
+              <div class="svc-sub">Data & AI, IT Budget, Cybersecurity peer benchmarks</div>
+            </div>
+            <div class="svc on" data-val="Executive Coaching & Board Enablement">
+              <div class="svc-name">Executive Coaching / Board</div>
+              <div class="svc-sub">1:1 coaching, board technology literacy</div>
+            </div>
+            <div class="svc" data-val="Expert Workshops">
+              <div class="svc-name">Expert-Led Workshops</div>
+              <div class="svc-sub">Facilitated executive team workshops</div>
+            </div>
+            <div class="svc" data-val="Verified Partner Marketplace">
+              <div class="svc-name">Partner Marketplace</div>
+              <div class="svc-sub">Curated technology & advisory partners</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="form-error" class="error-box" style="margin-bottom:1rem"></div>
+        <button class="btn-primary" onclick="runGeneration()" style="max-width:400px">Generate Prospect Cards →</button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS VIEW -->
+<div id="view-results" style="display:none">
+  <!-- Results bar -->
+  <div class="results-bar">
+    <div style="display:flex;align-items:center">
+      <span id="res-title" class="results-title"></span>
+      <span id="res-sub" class="results-sub"></span>
+    </div>
+    <div class="results-bar-right">
+      <button class="btn-ghost" style="font-size:11px" onclick="showView('form')">← New Run</button>
+    </div>
+  </div>
+  <!-- Shell with sidebar -->
+  <div class="shell">
+    <div class="sidebar" id="results-sidebar">
+      <div class="sidebar-inner">
+        <!-- Stats -->
+        <div class="dash-stats">
+          <div class="dash-title">Pipeline Summary</div>
+          <div class="stat-total">
+            <div><div id="stat-total-n" class="stat-total-n">0</div><div class="stat-total-lbl">Total Researched</div></div>
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:16px">👥</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-tile">
+              <div id="stat-hot-n" class="stat-n red">0</div>
+              <div class="stat-lbl">🔥 Hot</div>
+            </div>
+            <div class="stat-tile">
+              <div id="stat-warm-n" class="stat-n amber">0</div>
+              <div class="stat-lbl">♨ Warm</div>
+            </div>
+            <div class="stat-tile" style="grid-column:1/-1">
+              <div id="stat-cool-n" class="stat-n grey">0</div>
+              <div class="stat-lbl">❄ Cool / Still Processing</div>
+            </div>
+          </div>
+          <div class="heat-bar-wrap">
+            <div class="heat-bar" id="heat-bar-vis">
+              <div class="heat-seg hot" id="hb-hot" style="width:0%"></div>
+              <div class="heat-seg warm" id="hb-warm" style="width:0%"></div>
+              <div class="heat-seg cool" id="hb-cool" style="width:0%"></div>
+            </div>
+            <div class="heat-legend">
+              <div class="heat-leg-item"><div class="heat-dot" style="background:var(--red)"></div>Hot</div>
+              <div class="heat-leg-item"><div class="heat-dot" style="background:var(--amber)"></div>Warm</div>
+              <div class="heat-leg-item"><div class="heat-dot" style="background:var(--grey-300)"></div>Cool</div>
+            </div>
+          </div>
+        </div>
+        <!-- Nav list -->
+        <div class="sidebar-nav" id="sidebar-nav">
+          <div class="nav-section-label">Prospects</div>
+          <div id="nav-items"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Main cards area -->
+    <div class="main-scroll" id="cards-main">
+      <div id="conf-slot"></div>
+      <div id="cards-slot"></div>
+      <div id="clay-slot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Clay contact modal -->
+<div id="clay-modal" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeClayModal()">
+  <div class="modal">
+    <div class="modal-title">Add Contact from Clay</div>
+    <div class="modal-sub">Paste the data from a Clay CSV row into the fields below. The more fields you fill in, the better the outreach copy. The Signals field makes the biggest difference.</div>
+    <div class="grid2">
+      <div class="field"><label>First Name *</label><input type="text" id="clay-fname" placeholder="Scott"/></div>
+      <div class="field"><label>Last Name *</label><input type="text" id="clay-lname" placeholder="Collary"/></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Job Title *</label><input type="text" id="clay-title" placeholder="Chief Information Officer"/></div>
+      <div class="field"><label>Company Name *</label><input type="text" id="clay-company" placeholder="Westpac Group"/></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Work Email</label><input type="text" id="clay-email" placeholder="scott.collary@westpac.com.au"/></div>
+      <div class="field"><label>LinkedIn URL</label><input type="text" id="clay-linkedin" placeholder="linkedin.com/in/scott-collary"/></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Location</label><input type="text" id="clay-location" placeholder="Sydney, NSW, Australia"/></div>
+      <div class="field"><label>LinkedIn Headline</label><input type="text" id="clay-headline" placeholder="CIO at Westpac"/></div>
+    </div>
+    <div class="field">
+      <label>LinkedIn Summary / Bio</label>
+      <textarea id="clay-summary" style="min-height:70px" placeholder="Paste the LinkedIn summary or bio from Clay..."></textarea>
+    </div>
+    <div class="field">
+      <label>Transformation Readiness Signals ✦ <span style="font-weight:400;color:var(--grey-500)">Most important field</span></label>
+      <textarea id="clay-signals" style="min-height:100px" placeholder="Paste the full signals text from Clay's enrichment column. e.g. Scott Collary, CIO of Westpac Group, is a high-value prospect... Westpac is currently executing the UNITE transformation programme..."></textarea>
+    </div>
+    <div id="clay-modal-error" class="error-box"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeClayModal()">Cancel</button>
+      <button class="btn-primary" onclick="addClayContact()" style="margin-top:0">Add Contact →</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     RE-ENGAGEMENT TOOL — FORM VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="view-re-form" style="display:none">
+  <div class="shell" style="display:block;overflow-y:auto">
+    <div class="main-scroll">
+      <div class="form-wrap">
+
+        <!-- Step 1: Conference -->
+        <div class="card">
+          <div class="eyebrow"><div class="eyebrow-n">1</div>Conference</div>
+          <div class="grid2">
+            <div class="field">
+              <label>Edge Conference</label>
+              <select id="re-conf-select">
+                <option value="">Select a conference...</option>
+                <option>CIO Edge Sydney</option>
+                <option>CIO Edge Melbourne</option>
+                <option>Data &amp; AI Edge Sydney</option>
+                <option>Government Edge Canberra</option>
+                <option>Digital &amp; AI Edge Sydney</option>
+                <option>Security Edge Sydney</option>
+                <option>Security Edge Melbourne</option>
+                <option>Cloud &amp; Infrastructure Edge Sydney</option>
+                <option>People &amp; AI Edge Sydney</option>
+                <option>CFO Edge Sydney</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Event Date <span style="font-weight:400;color:var(--grey-500)">(optional)</span></label>
+              <input type="text" id="re-event-date" placeholder="e.g. 12 August 2026, Melbourne"/>
+              <p class="hint">Used to add urgency framing in the copy</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Microsite content -->
+        <div class="card">
+          <div class="eyebrow"><div class="eyebrow-n">2</div>Conference Content</div>
+          <div class="field">
+            <label>Microsite Content <span style="font-weight:400;color:var(--grey-500)">(paste from Obsidian scrape)</span></label>
+            <textarea class="microsite-box" id="re-microsite" placeholder="Paste the scraped microsite markdown here. Include agenda, session topics, speakers, themes — the more context the better. Claude uses this to understand exactly why this conference matters and to write copy that references real sessions and speakers."></textarea>
+            <p class="hint">Scrape the conference microsite using Obsidian Web Clipper, paste the result here. Agenda, speakers, and session topics make the biggest difference to copy quality.</p>
+          </div>
+        </div>
+
+        <!-- Step 3: Contacts -->
+        <div class="card">
+          <div class="eyebrow"><div class="eyebrow-n">3</div>Contact Lists</div>
+          <p class="hint" style="margin-bottom:1rem">Add contacts to one or both lists. The copy will be tailored to each person's attendance history. HubSpot ID is included in each card so you can link back for import.</p>
+
+          <div class="list-tabs">
+            <button class="list-tab active" id="re-list-tab-edge" onclick="switchListTab('edge')">
+              Previous Edge Attendees
+              <span class="list-count" id="re-edge-count">0</span>
+            </button>
+            <button class="list-tab" id="re-list-tab-roundtable" onclick="switchListTab('roundtable')">
+              Previous Roundtable Attendees
+              <span class="list-count" id="re-roundtable-count">0</span>
+            </button>
+          </div>
+
+          <!-- Edge attendees panel -->
+          <div class="contact-input-panel active" id="re-panel-edge">
+            <div style="margin-bottom:8px">
+              <div id="re-csv-dropzone" onclick="document.getElementById('re-csv-input-edge').click()">
+                <div style="font-size:16px;margin-bottom:4px">📋</div>
+                <div style="font-size:12px;font-weight:600;color:var(--grey-700)">Drop CSV or click to upload</div>
+                <div style="font-size:11px;color:var(--grey-500);margin-top:3px">Columns: First Name, Last Name, Job Title, Company, HubSpot ID</div>
+              </div>
+              <input type="file" id="re-csv-input-edge" accept=".csv" style="display:none" onchange="handleReCSV(this.files[0],'edge')"/>
+            </div>
+            <div class="contact-row-header">
+              <span>First Name</span><span>Last Name</span><span>Job Title · Company</span><span>HubSpot ID</span><span>Context <span style="font-weight:400;text-transform:none;letter-spacing:0">(from Clay / LinkedIn)</span></span><span></span>
+            </div>
+            <div id="re-rows-edge"></div>
+            <button class="add-contact-btn" onclick="addReContact('edge')">+ Add contact</button>
+          </div>
+
+          <!-- Roundtable attendees panel -->
+          <div class="contact-input-panel" id="re-panel-roundtable">
+            <div style="margin-bottom:8px">
+              <div id="re-csv-dropzone-rt" style="padding:1.25rem;border:1.5px dashed var(--grey-200);border-radius:var(--radius);cursor:pointer;transition:all var(--t);text-align:center;background:var(--grey-50)" onclick="document.getElementById('re-csv-input-rt').click()">
+                <div style="font-size:16px;margin-bottom:4px">📋</div>
+                <div style="font-size:12px;font-weight:600;color:var(--grey-700)">Drop CSV or click to upload</div>
+                <div style="font-size:11px;color:var(--grey-500);margin-top:3px">Columns: First Name, Last Name, Job Title, Company, HubSpot ID</div>
+              </div>
+              <input type="file" id="re-csv-input-rt" accept=".csv" style="display:none" onchange="handleReCSV(this.files[0],'roundtable')"/>
+            </div>
+            <div class="contact-row-header">
+              <span>First Name</span><span>Last Name</span><span>Job Title · Company</span><span>HubSpot ID</span><span>Context <span style="font-weight:400;text-transform:none;letter-spacing:0">(from Clay / LinkedIn)</span></span><span></span>
+            </div>
+            <div id="re-rows-roundtable"></div>
+            <button class="add-contact-btn" onclick="addReContact('roundtable')">+ Add contact</button>
+          </div>
+        </div>
+
+        <div id="re-form-error" class="error-box" style="margin-bottom:1rem"></div>
+        <button class="btn-primary" onclick="runReEngagement()" style="max-width:400px">Generate Re-engagement Copy →</button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     RE-ENGAGEMENT TOOL — RESULTS VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="view-re-results" style="display:none">
+  <div class="results-bar">
+    <div style="display:flex;align-items:center">
+      <span id="re-res-title" class="results-title"></span>
+      <span id="re-res-sub" class="results-sub"></span>
+    </div>
+    <div class="results-bar-right">
+      <button class="btn-ghost" style="font-size:11px" onclick="showView('re-form')">← New Run</button>
+    </div>
+  </div>
+  <div class="shell">
+    <!-- Sidebar -->
+    <div class="sidebar" id="re-sidebar">
+      <div class="sidebar-inner">
+        <div class="dash-stats">
+          <div class="dash-title">Copy Run Summary</div>
+          <div class="stat-total">
+            <div><div id="re-stat-total" class="stat-total-n">0</div><div class="stat-total-lbl">Total Contacts</div></div>
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:16px">✉️</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-tile">
+              <div id="re-stat-edge" class="stat-n red">0</div>
+              <div class="stat-lbl">Edge Attendees</div>
+            </div>
+            <div class="stat-tile">
+              <div id="re-stat-rt" class="stat-n amber">0</div>
+              <div class="stat-lbl">Roundtable</div>
+            </div>
+            <div class="stat-tile" style="grid-column:1/-1">
+              <div id="re-stat-done" class="stat-n grey">0</div>
+              <div class="stat-lbl">Assets Generated</div>
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-nav">
+          <div class="nav-section-label">Contacts</div>
+          <div id="re-nav-items"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Main -->
+    <div class="main-scroll" id="re-cards-main">
+      <div id="re-cards-slot"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+let API_KEY = localStorage.getItem('adapt_api_key') || '';
+let allProspects = [];
+let currentMode = 'research';
+let clayContacts = [];
+// Re-engagement state — declared here so showView can reference activeTool
+let activeTool = 'prospector';
+let reContacts = { edge: [], roundtable: [] };
+let activeListTab = 'edge';
+let reProspects = [];
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  showView(API_KEY ? 'form' : 'apikey');
+  document.getElementById('roles-grid').addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if(c) c.classList.toggle('on');
+  });
+  document.getElementById('svc-grid').addEventListener('click', e => {
+    const c = e.target.closest('.svc'); if(c) c.classList.toggle('on');
+  });
+  const dz = document.getElementById('csv-dropzone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.style.borderColor='var(--red)'; });
+  dz.addEventListener('dragleave', () => { dz.style.borderColor='var(--grey-200)'; });
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.style.borderColor='var(--grey-200)';
+    handleCsvFile(e.dataTransfer.files[0]);
+  });
+  // Seed re-engagement contact rows with one blank row each
+  addReContact('edge');
+  addReContact('roundtable');
+});
+
+function showView(n) {
+  ['apikey','form','results','re-form','re-results'].forEach(v => {
+    const el = document.getElementById('view-'+v);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById('view-'+n);
+  if (target) target.style.display = 'block';
+  window.scrollTo(0, 0);
+  const switcher = document.getElementById('tool-switcher');
+  if (switcher) {
+    switcher.style.display = n === 'apikey' ? 'none' : 'flex';
+  }
+  const tabP = document.getElementById('tool-tab-prospector');
+  const tabR = document.getElementById('tool-tab-reengagement');
+  if (tabP && tabR) {
+    if (n === 'form' || n === 'results') {
+      tabP.classList.add('active'); tabR.classList.remove('active'); activeTool = 'prospector';
+    } else if (n === 're-form' || n === 're-results') {
+      tabR.classList.add('active'); tabP.classList.remove('active'); activeTool = 'reengagement';
+    }
+  }
+}
+
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  const err = document.getElementById('apikey-error');
+  if (!val.startsWith('sk-ant-')) { err.textContent="Key should start with sk-ant-"; err.style.display='block'; return; }
+  err.style.display='none';
+  API_KEY = val;
+  localStorage.setItem('adapt_api_key', val);
+  showView('form');
+}
+
+function chips(id) {
+  return [...document.querySelectorAll('#'+id+' .on')].map(e => e.dataset.val);
+}
+
+// ── Mode ──────────────────────────────────────────────────────────────────
+function switchMode(mode) {
+  currentMode = mode;
+  ['research','clay'].forEach(m => {
+    document.getElementById('mode-btn-'+m).classList.toggle('active', m===mode);
+    document.getElementById('mode-'+m).classList.toggle('active', m===mode);
+  });
+}
+
+// ── CSV ───────────────────────────────────────────────────────────────────
+function handleCsvFile(file) {
+  if (!file) return;
+  const dz = document.getElementById('csv-dropzone');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = parseCSV(e.target.result);
+      if (!parsed.length) throw new Error('No contacts found in this CSV.');
+      clayContacts = parsed;
+      renderClayContacts();
+      dz.style.borderColor = 'var(--green-border)';
+      dz.style.background  = 'var(--green-light)';
+      const lines = dz.querySelectorAll('div');
+      if (lines[1]) lines[1].textContent = '✓  ' + file.name;
+      if (lines[2]) lines[2].textContent = parsed.length + ' contacts loaded';
+    } catch(err) {
+      dz.style.borderColor = 'var(--red-border)';
+      dz.style.background  = 'var(--red-light)';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const rows=[]; let row=[],cell='',inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i],next=text[i+1];
+    if(inQ){if(ch==='"'){if(next==='"'){cell+='"';i++;}else inQ=false;}else cell+=ch;}
+    else{if(ch==='"')inQ=true;else if(ch===','){row.push(cell);cell='';}else if(ch==='\r'&&next==='\n'){row.push(cell);cell='';rows.push(row);row=[];i++;}else if(ch==='\n'||ch==='\r'){row.push(cell);cell='';rows.push(row);row=[];}else cell+=ch;}
+  }
+  if(cell||row.length){row.push(cell);rows.push(row);}
+  while(rows.length&&rows[rows.length-1].every(c=>!c.trim()))rows.pop();
+  if(rows.length<2)throw new Error('CSV needs header + data rows.');
+  const headers=rows[0].map(h=>h.trim().toLowerCase());
+  function colIdx(...n){for(const name of n){const i=headers.findIndex(h=>h.includes(name.toLowerCase()));if(i>=0)return i;}return -1;}
+  const idxFname=colIdx('first name'),idxLname=colIdx('last name'),idxFull=colIdx('full name'),idxCompany=colIdx('company name','company'),idxTitle=colIdx('job title','title','position'),idxEmail=colIdx('work email','email'),idxLinkedin=colIdx('linkedin profile','linkedin url','linkedin'),idxLocation=colIdx('location','city','country'),idxHeadline=colIdx('headline'),idxSummary=colIdx('summary','bio','about'),idxSignals=colIdx('transformation readiness','signals','enrichment','notes');
+  function get(row,idx){return(idx>=0&&row[idx])?row[idx].trim():'';}
+  const contacts=[];
+  for(let i=1;i<rows.length;i++){
+    const row=rows[i],company=get(row,idxCompany),title=get(row,idxTitle);
+    let fname=get(row,idxFname),lname=get(row,idxLname);
+    const full=get(row,idxFull);
+    if(!fname&&full){const p=full.trim().split(/\s+/);fname=p[0]||'';lname=p.slice(1).join(' ')||'';}
+    if(!fname&&!company)continue;
+    contacts.push({fname,lname,title,company,email:get(row,idxEmail),linkedin:get(row,idxLinkedin),location:get(row,idxLocation),headline:get(row,idxHeadline),summary:get(row,idxSummary),signals:get(row,idxSignals),selected:true});
+  }
+  if(!contacts.length)throw new Error('No valid contacts found.');
+  return contacts;
+}
+
+function selectAllClay(val){clayContacts.forEach(c=>c.selected=val);renderClayContacts();}
+function toggleClayContact(idx){clayContacts[idx].selected=!clayContacts[idx].selected;renderClayContacts();}
+function removeClayContact(idx){clayContacts.splice(idx,1);renderClayContacts();}
+
+function renderClayContacts(){
+  const el=document.getElementById('clay-contacts-list'),controls=document.getElementById('clay-row-controls');
+  if(!clayContacts.length){el.innerHTML='';controls.style.display='none';return;}
+  const withSignals=clayContacts.filter(c=>c.signals).length,selected=clayContacts.filter(c=>c.selected).length;
+  document.getElementById('clay-count-label').textContent=selected+' of '+clayContacts.length+' contacts selected';
+  document.getElementById('clay-signals-label').textContent=withSignals+' with signals';
+  controls.style.display='flex';
+  el.innerHTML=clayContacts.map((c,i)=>`
+    <div class="clay-contact-item ${c.signals?'has-signals':''}" style="opacity:${c.selected?1:0.45};cursor:pointer" onclick="toggleClayContact(${i})">
+      <button class="clay-remove" onclick="event.stopPropagation();removeClayContact(${i})" title="Remove">×</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:16px;height:16px;border-radius:3px;border:1.5px solid ${c.selected?'var(--red)':'var(--grey-300)'};background:${c.selected?'var(--red)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:white">${c.selected?'✓':''}</div>
+        <div>
+          <div class="clay-contact-name">${esc(c.fname)} ${esc(c.lname)}</div>
+          <div class="clay-contact-meta">${esc(c.title)}${c.company?' · '+esc(c.company):''}${c.email?' · '+esc(c.email):''}</div>
+          ${c.signals?'<div class="clay-contact-sig">✦ Signals enriched</div>':'<div style="font-size:10px;color:var(--grey-500);margin-top:3px">No signals — Claude will research</div>'}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openClayModal(){document.getElementById('clay-modal').style.display='flex';}
+function closeClayModal(){document.getElementById('clay-modal').style.display='none';}
+function addClayContact(){
+  const err=document.getElementById('clay-modal-error');
+  const fname=document.getElementById('clay-fname').value.trim();
+  const lname=document.getElementById('clay-lname').value.trim();
+  const title=document.getElementById('clay-title').value.trim();
+  const company=document.getElementById('clay-company').value.trim();
+  if(!fname||!title||!company){err.textContent='First Name, Job Title and Company are required.';err.style.display='block';return;}
+  err.style.display='none';
+  clayContacts.push({fname,lname,title,company,email:document.getElementById('clay-email').value.trim(),linkedin:document.getElementById('clay-linkedin').value.trim(),location:document.getElementById('clay-location').value.trim(),headline:document.getElementById('clay-headline').value.trim(),summary:document.getElementById('clay-summary').value.trim(),signals:document.getElementById('clay-signals').value.trim(),selected:true});
+  renderClayContacts();
+  closeClayModal();
+  ['clay-fname','clay-lname','clay-title','clay-company','clay-email','clay-linkedin','clay-location','clay-headline','clay-summary','clay-signals'].forEach(id=>document.getElementById(id).value='');
+}
+
+// ── Dashboard stats ───────────────────────────────────────────────────────
+function updateDashboard() {
+  const done = allProspects.filter(p => p.status === 'done');
+  const hot  = done.filter(p => p.heat === 'Hot').length;
+  const warm = done.filter(p => p.heat === 'Warm').length;
+  const cool = allProspects.length - hot - warm;
+  const total = allProspects.length;
+
+  document.getElementById('stat-total-n').textContent = total;
+  document.getElementById('stat-hot-n').textContent  = hot;
+  document.getElementById('stat-warm-n').textContent = warm;
+  document.getElementById('stat-cool-n').textContent = cool;
+
+  if (total > 0) {
+    document.getElementById('hb-hot').style.width  = (hot/total*100)+'%';
+    document.getElementById('hb-warm').style.width = (warm/total*100)+'%';
+    document.getElementById('hb-cool').style.width = (cool/total*100)+'%';
+  }
+}
+
+// ── Nav items ─────────────────────────────────────────────────────────────
+function addNavItem(id, label, status) {
+  const el = document.getElementById('nav-items');
+  const div = document.createElement('div');
+  div.id = 'nav-'+id;
+  div.className = 'prospect-nav-item';
+  div.onclick = () => scrollToCard(id);
+  const parts = label.split(' — ');
+  const name = parts[0] || label;
+  const co   = parts[1] || '';
+  div.innerHTML = `
+    <div class="nav-avatar loading" id="navav-${id}">${initials(name)}</div>
+    <div style="flex:1;min-width:0">
+      <div class="nav-name" id="navname-${id}">${esc(name)}</div>
+      <div class="nav-meta" id="navmeta-${id}">${esc(co)}</div>
+    </div>
+    <div class="nav-status loading" id="navst-${id}"></div>`;
+  el.appendChild(div);
+}
+
+function updateNavItem(id, prospect) {
+  const h = heatClass(prospect.delegate_heat);
+  const av = document.getElementById('navav-'+id);
+  const nm = document.getElementById('navname-'+id);
+  const mt = document.getElementById('navmeta-'+id);
+  const st = document.getElementById('navst-'+id);
+  const item = document.getElementById('nav-'+id);
+  if (av) { av.className = 'nav-avatar '+h; av.textContent = initials(prospect.name||'?'); }
+  if (nm) nm.textContent = prospect.name || nm.textContent;
+  if (mt) mt.textContent = prospect.title ? prospect.title + (prospect.company ? ' · '+prospect.company : '') : mt.textContent;
+  if (st) { st.className = 'nav-status done'; }
+  // Add heat badge
+  if (item) {
+    const existing = item.querySelector('.nav-heat');
+    if (existing) existing.remove();
+    const badge = document.createElement('div');
+    badge.className = 'nav-heat '+h;
+    badge.textContent = h === 'hot' ? '🔥 Hot' : h === 'warm' ? '♨ Warm' : '❄ Cool';
+    item.appendChild(badge);
+  }
+}
+
+function updateNavError(id) {
+  const st = document.getElementById('navst-'+id);
+  if (st) st.className = 'nav-status error';
+}
+
+function setNavActive(id) {
+  document.querySelectorAll('.prospect-nav-item').forEach(el => el.classList.remove('active'));
+  const item = document.getElementById('nav-'+id);
+  if (item) item.classList.add('active');
+}
+
+function scrollToCard(id) {
+  const card = document.getElementById('card-'+id);
+  if (card) {
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+    setNavActive(id);
+    card.style.boxShadow = '0 0 0 2px var(--red)';
+    setTimeout(() => { card.style.boxShadow = ''; }, 1200);
+  }
+}
+
+// ── Generation ────────────────────────────────────────────────────────────
+async function runGeneration() {
+  const conf = document.getElementById('conf-select').value;
+  const url  = document.getElementById('conf-url').value.trim();
+  const svcs = chips('svc-grid');
+  const err  = document.getElementById('form-error');
+
+  err.style.display='none';
+  if (!conf) { err.textContent='Please select a conference.'; err.style.display='block'; return; }
+
+  let prospects = [];
+  if (currentMode === 'research') {
+    const raw   = document.getElementById('companies-input').value.trim();
+    const roles = chips('roles-grid');
+    if (!raw)          { err.textContent='Please enter at least one company.'; err.style.display='block'; return; }
+    if (!roles.length) { err.textContent='Please select at least one job role.'; err.style.display='block'; return; }
+    prospects = raw.split('\n').map(c=>c.trim()).filter(Boolean).map(co => ({
+      label: co, context: {mode:'research', company:co, roles}
+    }));
+  } else {
+    const selected = clayContacts.filter(c=>c.selected);
+    if (!selected.length) { err.textContent='Please select at least one contact.'; err.style.display='block'; return; }
+    prospects = selected.map(c => ({
+      label: `${c.fname} ${c.lname} — ${c.company}`,
+      context: {mode:'clay', contact:c}
+    }));
+  }
+
+  // Reset state
+  allProspects = prospects.map((p,i) => ({id:'p'+i, label:p.label, status:'loading', heat:null, data:null}));
+
+  document.getElementById('res-title').textContent = conf;
+  document.getElementById('res-sub').textContent   = 'Generating '+prospects.length+' prospect card'+(prospects.length>1?'s':'')+'...';
+  document.getElementById('conf-slot').innerHTML   = '';
+  document.getElementById('cards-slot').innerHTML  = '';
+  document.getElementById('clay-slot').innerHTML   = '';
+  document.getElementById('nav-items').innerHTML   = '';
+
+  updateDashboard();
+  showView('results');
+
+  // Pre-populate sidebar nav + skeleton cards
+  for (let i = 0; i < prospects.length; i++) {
+    const id = 'p'+i;
+    addNavItem(id, prospects[i].label, 'loading');
+    document.getElementById('cards-slot').insertAdjacentHTML('beforeend', skeletonHTML(id, prospects[i].label));
+  }
+
+  let doneCount = 0;
+  for (let i = 0; i < prospects.length; i++) {
+    const id = 'p'+i;
+    const p  = prospects[i];
+    try {
+      const result = await callClaude(p.context, conf, url, svcs);
+      if (i === 0 && result.conference) {
+        document.getElementById('conf-slot').innerHTML = confBannerHTML(result.conference);
+      }
+      const sk = document.getElementById('sk-'+id);
+      if (sk) sk.outerHTML = prospectCardHTML(result.prospect, id);
+
+      allProspects[i].status = 'done';
+      allProspects[i].heat   = result.prospect.delegate_heat || 'Cool';
+      allProspects[i].data   = result.prospect;
+      updateNavItem(id, result.prospect);
+      doneCount++;
+      updateDashboard();
+      document.getElementById('res-sub').textContent = doneCount+' of '+prospects.length+' card'+(prospects.length>1?'s':'')+' ready';
+    } catch(e) {
+      allProspects[i].status = 'error';
+      updateNavError(id);
+      updateDashboard();
+      const sk = document.getElementById('sk-'+id);
+      if (sk) sk.outerHTML = `<div class="prospect-card" id="card-${id}" style="padding:1.5rem"><div style="font-size:13px;font-weight:600;margin-bottom:4px">${esc(p.label)}</div><div style="font-size:12px;color:var(--red)">Failed: ${esc(e.message)}</div></div>`;
+    }
+  }
+
+  document.getElementById('res-sub').textContent = doneCount+' prospect card'+(doneCount>1?'s':'')+' generated';
+  document.getElementById('clay-slot').innerHTML = currentMode==='clay' ? '' : clayHTML();
+}
+
+// ── Claude API call ───────────────────────────────────────────────────────
+async function callClaude(context, conf, url, svcs) {
+  const sys = `You are the ADAPT Edge Prospecting Engine — expert B2B research analyst and elite copywriter for ADAPT, Australia's most exclusive executive events and advisory business.
+
+ADAPT runs invitation-only peer conferences for C-suite and senior technology leaders from Australia and New Zealand's largest organisations.
+
+TARGET MARKET — ICP:
+- Geography: Australia and New Zealand only
+- Scale: $500M+ AUD annual revenue, OR any government agency (Federal, State, Local)
+- Ownership priority: Australian-owned organisations first, then global multinationals with a substantial, established technology team and local ANZ market presence
+- Disqualify smaller companies, foreign companies with no meaningful ANZ presence
+
+CONTACT IDENTIFICATION — CRITICAL:
+Flag your confidence level: "high", "medium", or "low". Set "low" if appointment was more than 2 years before your knowledge cutoff, or at a large organisation with frequent leadership turnover. Always include stale_contact_warning if confidence is medium or low.
+
+ADAPT TRANSFORMATION SERVICES:
+- Executive Advisory: Ongoing C-suite advisory retainer for senior technology and business leaders
+- Strategic Research & Benchmarks: Data & AI Benchmark, IT Budget Benchmark, Cybersecurity Benchmark — peer comparison tools for boards and executives. IMPORTANT: this is one of several services, not the default recommendation. Only recommend it where the prospect's specific operational context and signals point to a genuine need for peer benchmarking, board-level comparison data, or strategic positioning against peers.
+- 1:1 Executive Coaching: Personalised coaching for CxOs navigating complex transformations
+- Expert-Led Workshops: Facilitated workshops for executive teams
+- Board Enablement: Programmes to build technology literacy and governance capability at board level
+- Verified Partner Marketplace: Curated marketplace connecting executives with verified technology and advisory partners
+
+SCORING:
+- 80-100 = Hot (strong signals, perfect role match, active programme)
+- 50-79  = Warm (good fit, some signals, credible interest)
+- 20-49  = Cool (possible fit, weak signals, lower priority)
+
+STRICT COPY RULES:
+- Australian English: -ise not -ize, colour, organisation, programme, recognise, behaviour
+- Never open with: "I wanted to reach out", "Hope this finds you well", "I am reaching out", "I stumbled across", "In today's rapidly evolving"
+- No em dashes (— or –). Use commas or restructure.
+- Banned words: delve, leverage, elevate, testament, bespoke, dynamic, spearhead, unlock, foster, navigate, landscape, paradigm shift, revolutionary, game-changer, cutting-edge, transformative, robust, seamless, holistic, synergy, curated, tailored, empower, world-class, best-in-class
+- Write as a sharp, informed peer. Never salesy or transactional.
+- Conference always positioned as invitation-only peer environment, not a product.
+- Reference specific signals by name in every outreach asset.
+
+OUTREACH ASSETS:
+Email 1: Signal-driven hook + conference value, soft CTA. 150-200 words.
+Email 2: Peer and speaker focus, social proof. 130-170 words.
+Email 3: Premium invitation, urgency. 100-130 words.
+SMS 1: First reminder. Max 160 characters.
+SMS 2: Urgency nudge. Max 160 characters.
+LinkedIn DM: Conversational, executive tone. Under 300 words.
+Video Script: Natural delivery with [bracketed stage directions]. 60-90 seconds read aloud.
+Call Script: Opening Hook | Value Statement | Gatekeeper Strategy | Registration Close.
+
+RETURN valid JSON only. No markdown, no preamble.
+
+{
+  "conference": { "name": "string", "themes": ["string"], "value_prop": "string" },
+  "prospect": {
+    "company": "string",
+    "name": "string",
+    "title": "string",
+    "contact_confidence": "high|medium|low",
+    "stale_contact_warning": "string or null",
+    "icp_qualified": true,
+    "icp_note": "string",
+    "signals": [{ "label": "string", "detail": "string" }],
+    "delegate_score": 85,
+    "delegate_heat": "Hot|Warm|Cool",
+    "delegate_reasoning": "string",
+    "why_attend": "string",
+    "services_score": 70,
+    "services_heat": "Hot|Warm|Cool",
+    "recommended_service": "string",
+    "recommended_service_why": "string",
+    "all_services_fit": [{ "service": "string", "fit": "Primary|Secondary|Low", "rationale": "string" }],
+    "services_reasoning": "string",
+    "outreach": {
+      "email_1": { "subject": "string", "body": "string" },
+      "email_2": { "subject": "string", "body": "string" },
+      "email_3": { "subject": "string", "body": "string" },
+      "sms_1": "string",
+      "sms_2": "string",
+      "linkedin": "string",
+      "video_script": "string",
+      "call_script": "string"
+    }
+  }
+}`;
+
+  let user;
+  if (context.mode === 'clay') {
+    const c = context.contact;
+    user = `Conference: ${conf}
+Microsite: ${url || 'Not provided — draw on your knowledge of this conference series.'}
+ADAPT services to assess: ${svcs.join(', ')}
+Mode: CLAY VERIFIED DATA — use the details below exactly as provided. Do NOT guess or substitute.
+
+VERIFIED CONTACT:
+Full Name: ${c.fname} ${c.lname}
+Job Title: ${c.title}
+Company: ${c.company}
+${c.email    ? 'Work Email: '+c.email : ''}
+${c.linkedin ? 'LinkedIn: '+c.linkedin : ''}
+${c.location ? 'Location: '+c.location : ''}
+${c.headline ? 'LinkedIn Headline: '+c.headline : ''}
+${c.summary  ? 'LinkedIn Summary:\n'+c.summary : ''}
+${c.signals  ? '\nTRANSFORMATION READINESS SIGNALS (from Clay research):\n'+c.signals : '\nNo signals provided — assess based on company and role context.'}
+
+Since this is verified Clay data:
+- Set contact_confidence to "high"
+- Set stale_contact_warning to null
+- Reference the specific signals and data points above directly in ALL outreach copy
+- Do not invent signals not present in the data above
+
+Generate the complete prospect card. Apply every copy rule exactly.`;
+  } else {
+    user = `Conference: ${conf}
+Microsite: ${url || 'Not provided — draw on your knowledge of this conference series.'}
+Target roles: ${context.roles.join(', ')}
+ADAPT services to assess: ${svcs.join(', ')}
+Company: ${context.company}
+
+Generate the complete prospect card. Apply every rule exactly.`;
+  }
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:7000, system:sys, messages:[{role:'user',content:user}]})
+  });
+
+  if (!resp.ok) { const e=await resp.json().catch(()=>{}); throw new Error(e?.error?.message||'HTTP '+resp.status); }
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = (data.content||[]).map(b=>b.text||'').join('');
+  return JSON.parse(raw.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim());
+}
+
+// ── HTML builders ─────────────────────────────────────────────────────────
+function heatClass(heat) {
+  if (!heat) return 'cool';
+  const h = heat.toLowerCase();
+  return h === 'hot' ? 'hot' : h === 'warm' ? 'warm' : 'cool';
+}
+
+function skeletonHTML(id, label) {
+  const parts = label.split(' — ');
+  return `<div id="sk-${id}" class="prospect-card" style="padding:2rem">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem">
+      <div class="skeleton" style="width:52px;height:52px;border-radius:50%;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="skeleton" style="height:15px;width:45%;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:11px;width:65%"></div>
+      </div>
+    </div>
+    <div class="skeleton" style="height:6px;width:100%;border-radius:3px;margin-bottom:6px"></div>
+    <div class="skeleton" style="height:6px;width:75%;border-radius:3px;margin-bottom:1.5rem"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+      <div class="skeleton" style="height:100px;border-radius:8px"></div>
+      <div class="skeleton" style="height:100px;border-radius:8px"></div>
+      <div class="skeleton" style="height:100px;border-radius:8px"></div>
+    </div>
+    <div style="margin-top:1.25rem;font-size:12px;color:var(--grey-500);text-align:center">Researching ${esc(parts[0]||label)}...</div>
+  </div>`;
+}
+
+function confBannerHTML(c) {
+  return `<div class="conf-banner">
+    <div class="conf-name">${esc(c.name)}</div>
+    <div class="conf-desc">${esc(c.value_prop)}</div>
+    ${(c.themes||[]).length?'<div class="conf-themes">'+c.themes.map(t=>`<span class="conf-theme">${esc(t)}</span>`).join('')+'</div>':''}
+  </div>`;
+}
+
+function gaugeHTML(score, heat) {
+  const h = heatClass(heat);
+  const circ = 207.35; // 2*PI*33
+  const pct  = Math.min(100, Math.max(0, score));
+  const off  = circ - (pct/100)*circ;
+  return `<div class="gauge-wrap">
+    <svg width="80" height="80" viewBox="0 0 80 80">
+      <circle class="gauge-track" cx="40" cy="40" r="33"/>
+      <circle class="gauge-fill ${h}" cx="40" cy="40" r="33"
+        stroke-dasharray="${circ.toFixed(2)}"
+        stroke-dashoffset="${off.toFixed(2)}"/>
+    </svg>
+    <div class="gauge-center">
+      <span class="gauge-num ${h}">${pct}</span>
+    </div>
+  </div>`;
+}
+
+function prospectCardHTML(p, id) {
+  const ds = Math.min(100, Math.max(0, parseInt(p.delegate_score)||0));
+  const ss = Math.min(100, Math.max(0, parseInt(p.services_score)||0));
+  const dh = heatClass(p.delegate_heat);
+  const sh = heatClass(p.services_heat);
+  const emoji = h => h==='hot'?'🔥':h==='warm'?'♨':'❄';
+
+  const tabs = [
+    {id:'e1', label:'Email 1',      subj:p.outreach?.email_1?.subject, body:p.outreach?.email_1?.body},
+    {id:'e2', label:'Email 2',      subj:p.outreach?.email_2?.subject, body:p.outreach?.email_2?.body},
+    {id:'e3', label:'Email 3',      subj:p.outreach?.email_3?.subject, body:p.outreach?.email_3?.body},
+    {id:'sm1',label:'SMS 1',        body:p.outreach?.sms_1},
+    {id:'sm2',label:'SMS 2',        body:p.outreach?.sms_2},
+    {id:'li', label:'LinkedIn DM',  body:p.outreach?.linkedin},
+    {id:'vid',label:'Video Script', body:p.outreach?.video_script},
+    {id:'cal',label:'Call Script',  body:p.outreach?.call_script},
+  ];
+
+  const staleWarn = (p.stale_contact_warning && p.contact_confidence !== 'high')
+    ? `<div class="stale-warn"><span class="stale-icon">⚠</span><div><strong>Verify contact before outreach</strong>${esc(p.stale_contact_warning)}</div></div>`
+    : '';
+
+  // Services fit items
+  const servicesFit = (p.all_services_fit||[]).map(s => `
+    <div class="service-item ${s.fit==='Primary'?'primary':''}">
+      <div class="service-dot ${s.fit==='Primary'?'primary':'secondary'}"></div>
+      <div>
+        <div style="font-size:11.5px;font-weight:${s.fit==='Primary'?'700':'500'}">${esc(s.service)}</div>
+        ${s.fit!=='Low'?`<div style="font-size:10.5px;color:${s.fit==='Primary'?'var(--red)':'var(--grey-500)'};margin-top:2px;line-height:1.4">${esc(s.rationale)}</div>`:''}
+      </div>
+    </div>`).join('');
+
+  return `<div class="prospect-card" id="card-${id}" onclick="setNavActive('${id}')">
+
+    ${staleWarn}
+
+    <!-- HEAD -->
+    <div class="pc-head">
+      <div class="avatar ${dh}">${initials(p.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="pc-name">${esc(p.name||'Contact TBC')}</div>
+        <div class="pc-meta">${esc(p.title)} · ${esc(p.company)}</div>
+        <div class="pc-tags">
+          ${p.icp_qualified?'<span class="tag red">ICP Qualified</span>':'<span class="tag warn">ICP Review</span>'}
+          ${p.contact_confidence==='low'?'<span class="tag warn">⚠ Verify Contact</span>':p.contact_confidence==='medium'?'<span class="tag warn">Check Contact</span>':'<span class="tag">Contact Likely Current</span>'}
+          ${p.icp_note?`<span class="tag">${esc(p.icp_note)}</span>`:''}
+        </div>
+      </div>
+    </div>
+
+    <!-- SCORE STRIP -->
+    <div class="score-strip">
+      <div class="score-col">
+        ${gaugeHTML(ds, p.delegate_heat)}
+        <div class="score-content">
+          <div class="score-label">Edge Delegate Fit</div>
+          <div class="heat-pill ${dh}"><span class="heat-dot ${dh}"></span>${emoji(dh)} ${esc(p.delegate_heat||'Cool')}</div>
+          <div class="score-reasoning">${esc(p.delegate_reasoning)}</div>
+        </div>
+      </div>
+      <div class="score-col">
+        ${gaugeHTML(ss, p.services_heat)}
+        <div class="score-content">
+          <div class="score-label">Transformation Services Fit</div>
+          <div class="heat-pill ${sh}"><span class="heat-dot ${sh}"></span>${emoji(sh)} ${esc(p.services_heat||'Cool')}</div>
+          <div class="score-reasoning">${esc(p.services_reasoning)}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THREE-COLUMN BODY -->
+    <div class="pc-body">
+
+      <!-- Col 1: Research Signals -->
+      <div class="pc-col">
+        <div class="pc-col-title">
+          <div class="pc-col-title-icon red">⚡</div>
+          Research Signals
+        </div>
+        <div class="signal-list">
+          ${(p.signals||[]).map(s=>`
+            <div class="signal-item">
+              <div class="sig-dot" style="margin-top:6px"></div>
+              <div>
+                <div class="sig-label">${esc(s.label)}</div>
+                <div class="sig-detail">${esc(s.detail)}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Col 2: Why Attend -->
+      <div class="pc-col">
+        <div class="pc-col-title">
+          <div class="pc-col-title-icon red">🎯</div>
+          Why This Person Should Attend
+        </div>
+        ${p.why_attend ? `<div class="why-attend-block">
+          <div class="why-attend-label">Conference Alignment</div>
+          <div class="why-attend-text">${esc(p.why_attend)}</div>
+        </div>` : ''}
+        <div style="margin-top:8px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-500);margin-bottom:6px">Signal → Conference Link</div>
+          ${(p.signals||[]).slice(0,3).map(s=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--grey-100)">
+            <div style="width:3px;flex-shrink:0;background:var(--red);border-radius:2px;margin-top:3px"></div>
+            <div style="font-size:11.5px;color:var(--grey-700);line-height:1.5">${esc(s.label)}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Col 3: Services Fit -->
+      <div class="pc-col">
+        <div class="pc-col-title">
+          <div class="pc-col-title-icon amber">💼</div>
+          Transformation Services Fit
+        </div>
+        ${p.recommended_service_why ? `<div class="rec-service-block">
+          <div class="rec-service-name">Primary: ${esc(p.recommended_service||'')}</div>
+          <div class="rec-service-reasoning">${esc(p.recommended_service_why)}</div>
+        </div>` : p.recommended_service ? `<div class="rec-service-block">
+          <div class="rec-service-name">${esc(p.recommended_service)}</div>
+          <div class="rec-service-reasoning">${esc(p.services_reasoning)}</div>
+        </div>` : ''}
+        ${servicesFit ? `<div class="service-menu">${servicesFit}</div>` : ''}
+      </div>
+
+    </div>
+
+    <!-- OUTREACH TABS -->
+    <div class="outreach-section">
+      <div class="outreach-header">
+        <div class="outreach-label">Outreach Assets</div>
+        <div style="font-size:11px;color:var(--grey-500)">${tabs.length} assets generated</div>
+      </div>
+      <div class="tab-bar">
+        ${tabs.map((t,ti)=>`<button class="tab ${ti===0?'active':''}" onclick="switchTab('${id}','${t.id}')" data-group="${id}" data-tab="${t.id}">${esc(t.label)}</button>`).join('')}
+      </div>
+      ${tabs.map((t,ti)=>{
+        const cv = t.subj ? 'Subject: '+t.subj+'\n\n'+t.body : (t.body||'');
+        const wc = (t.body||'').split(/\s+/).filter(Boolean).length;
+        return `<div class="tab-pane ${ti===0?'active':''}" data-group="${id}" data-pane="${t.id}">
+          ${t.subj?`<div class="subj-row">Subject: <span>${esc(t.subj)}</span></div>`:''}
+          <div class="body-box">${esc(t.body||'')}</div>
+          <div class="copy-row">
+            <button class="btn-sm" onclick="doCopy(this,${JSON.stringify(cv)})">⎘ Copy</button>
+            <span class="wc">${wc} words</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+  </div>`;
+}
+
+function clayHTML() {
+  return `<div class="clay-panel">
+    <div class="clay-head">
+      <span style="font-size:16px">⬡</span>
+      <span class="clay-head-title">Connect Clay to Fix the Stale Contact Problem</span>
+      <span class="clay-badge">Recommended</span>
+    </div>
+    <div class="clay-body">
+      <p class="clay-intro">Claude's research uses training data with a knowledge cutoff, meaning contacts can be out of date. Clay solves this by pulling live, verified data from LinkedIn and other real-time sources before outreach.</p>
+      <div class="clay-why">
+        <div class="clay-why-item"><div class="clay-why-label">Problem Claude has</div><div class="clay-why-text">Training data cutoff means CxO appointments from 2–3 years ago may no longer be accurate. Leaders retire, move roles, or get replaced.</div></div>
+        <div class="clay-why-item"><div class="clay-why-label">What Clay adds</div><div class="clay-why-text">Real-time LinkedIn verification, confirmed email addresses, live job postings as signals, and current company news — all before a single email is sent.</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey-500);margin-bottom:10px">How to connect Clay</div>
+      <ul class="clay-steps">
+        <li class="clay-step"><span class="clay-n">1</span>Sign up free at clay.com and create a new Table.</li>
+        <li class="clay-step"><span class="clay-n">2</span>Add your target company names as rows. Add a "Find People" enrichment column with the target job title. Clay searches LinkedIn and returns the current person with their verified email and LinkedIn URL.</li>
+        <li class="clay-step"><span class="clay-n">3</span>Add a "Recent News" column (powered by Perplexity) and a "Job Postings" column. These become your live buying signals.</li>
+        <li class="clay-step"><span class="clay-n">4</span>Export as CSV. Paste the verified name, title, and signals back into this app and regenerate.</li>
+        <li class="clay-step"><span class="clay-n">5</span>For a fully automated workflow, ask a developer to set up a Clay webhook. The full technical architecture is in your Claude project files.</li>
+      </ul>
+    </div>
+  </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function switchTab(g, id) {
+  document.querySelectorAll(`[data-group="${g}"].tab`).forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll(`[data-group="${g}"].tab-pane`).forEach(p=>p.classList.remove('active'));
+  const tEl = document.querySelector(`[data-group="${g}"][data-tab="${id}"]`);
+  const pEl = document.querySelector(`[data-group="${g}"][data-pane="${id}"]`);
+  if (tEl) tEl.classList.add('active');
+  if (pEl) pEl.classList.add('active');
+}
+
+function doCopy(btn, text) {
+  navigator.clipboard.writeText(text).catch(() => {
+    const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);
+  });
+  btn.classList.add('copied'); btn.textContent='✓ Copied';
+  setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML='⎘ Copy';}, 2200);
+}
+
+function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function initials(n){ if(!n)return'?'; const p=n.trim().split(' ').filter(Boolean); return((p[0]?.[0]||'')+(p[p.length-1]?.[0]||'')).toUpperCase()||'?'; }
+
+// ═══════════════════════════════════════════
+// TOOL SWITCHER
+// ═══════════════════════════════════════════
+
+function switchTool(tool) {
+  activeTool = tool;
+  ['prospector','reengagement'].forEach(t => {
+    document.getElementById('tool-tab-'+t).classList.toggle('active', t===tool);
+  });
+  // Show the right home view for the tool
+  if (tool === 'prospector') showView('form');
+  else showView('re-form');
+}
+
+function handleNewRun() {
+  if (activeTool === 'prospector') showView('form');
+  else showView('re-form');
+}
+
+// Patch showView to handle all view IDs
+const _origShowView = showView;
+// Override with one that knows about re-engagement views too
+
+// ═══════════════════════════════════════════
+// RE-ENGAGEMENT TOOL STATE
+// ═══════════════════════════════════════════
+
+function switchListTab(tab) {
+  activeListTab = tab;
+  ['edge','roundtable'].forEach(t => {
+    document.getElementById('re-list-tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('re-panel-'+t).classList.toggle('active', t===tab);
+  });
+}
+
+// ── Contact rows (manual) ────────────────────────────────────────────────
+function addReContact(list, data={}) {
+  const arr = reContacts[list];
+  const idx = arr.length;
+  arr.push({ fname: data.fname||'', lname: data.lname||'', titleco: data.titleco||'', hubspot: data.hubspot||'' });
+  renderReRows(list);
+  // focus first empty field of new row
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#re-rows-'+list+' .contact-row');
+    const last = rows[rows.length-1];
+    if (last) last.querySelector('input')?.focus();
+  }, 50);
+}
+
+function removeReContact(list, idx) {
+  reContacts[list].splice(idx, 1);
+  renderReRows(list);
+}
+
+function updateReContact(list, idx, field, val) {
+  reContacts[list][idx][field] = val;
+  updateListCount(list);
+}
+
+function renderReRows(list) {
+  const container = document.getElementById('re-rows-'+list);
+  container.innerHTML = reContacts[list].map((c, i) => `
+    <div class="contact-row">
+      <input type="text" placeholder="First name"     value="${esc(c.fname)}"   oninput="updateReContact('${list}',${i},'fname',this.value)"/>
+      <input type="text" placeholder="Last name"      value="${esc(c.lname)}"   oninput="updateReContact('${list}',${i},'lname',this.value)"/>
+      <input type="text" placeholder="CIO · Westpac"  value="${esc(c.titleco)}" oninput="updateReContact('${list}',${i},'titleco',this.value)"/>
+      <input type="text" placeholder="HubSpot ID"     value="${esc(c.hubspot)}" oninput="updateReContact('${list}',${i},'hubspot',this.value)"/>
+      <input type="text" placeholder="e.g. Recently appointed. Posts about AI governance. Inherited legacy stack." value="${esc(c.context||'')}" oninput="updateReContact('${list}',${i},'context',this.value)" style="font-size:11.5px"/>
+      <button class="del-btn" onclick="removeReContact('${list}',${i})" title="Remove">×</button>
+    </div>`).join('');
+  updateListCount(list);
+}
+
+function updateListCount(list) {
+  const n = reContacts[list].filter(c => c.fname || c.lname).length;
+  document.getElementById('re-'+list+'-count').textContent = n;
+}
+
+// ── CSV upload ────────────────────────────────────────────────────────────
+function handleReCSV(file, list) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = parseReCSV(e.target.result);
+      parsed.forEach(c => { reContacts[list].push(c); });
+      renderReRows(list);
+    } catch(err) {
+      const errEl = document.getElementById('re-form-error');
+      errEl.textContent = 'CSV error: ' + err.message;
+      errEl.style.display = 'block';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseReCSV(text) {
+  // Reuse the robust RFC-4180 parser pattern from Tool 1
+  const rows=[]; let row=[],cell='',inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i],next=text[i+1];
+    if(inQ){if(ch==='"'){if(next==='"'){cell+='"';i++;}else inQ=false;}else cell+=ch;}
+    else{if(ch==='"')inQ=true;else if(ch===','){row.push(cell);cell='';}else if(ch==='\r'&&next==='\n'){row.push(cell);cell='';rows.push(row);row=[];i++;}else if(ch==='\n'||ch==='\r'){row.push(cell);cell='';rows.push(row);row=[];}else cell+=ch;}
+  }
+  if(cell||row.length){row.push(cell);rows.push(row);}
+  while(rows.length&&rows[rows.length-1].every(c=>!c.trim()))rows.pop();
+  if(rows.length<2)throw new Error('CSV needs a header row plus at least one data row.');
+
+  const headers=rows[0].map(h=>h.trim().toLowerCase());
+  function col(...names){for(const n of names){const i=headers.findIndex(h=>h.includes(n.toLowerCase()));if(i>=0)return i;}return -1;}
+  const iF=col('first name','firstname'),iL=col('last name','lastname'),iFull=col('full name','name'),iTitle=col('job title','title','role'),iCo=col('company'),iHub=col('hubspot','hs id','contact id','id'),iCtx=col('context','enrichment','notes','signals','linkedin summary','about','bio');
+
+  function get(row,idx){return(idx>=0&&row[idx])?row[idx].trim():'';}
+  const contacts=[];
+  for(let i=1;i<rows.length;i++){
+    const row=rows[i];
+    let fname=get(row,iF),lname=get(row,iL);
+    if(!fname){const full=get(row,iFull);if(full){const p=full.split(/\s+/);fname=p[0]||'';lname=p.slice(1).join(' ')||'';}}
+    const title=get(row,iTitle),company=get(row,iCo),hubspot=get(row,iHub),context=get(row,iCtx);
+    const titleco = [title,company].filter(Boolean).join(' · ');
+    if(!fname&&!company)continue;
+    contacts.push({fname,lname,titleco,hubspot,context});
+  }
+  if(!contacts.length)throw new Error('No valid contacts found in CSV.');
+  return contacts;
+}
+
+// ── Generation ────────────────────────────────────────────────────────────
+async function runReEngagement() {
+  const conf      = document.getElementById('re-conf-select').value.trim();
+  const eventDate = document.getElementById('re-event-date').value.trim();
+  const microsite = document.getElementById('re-microsite').value.trim();
+  const err       = document.getElementById('re-form-error');
+  err.style.display = 'none';
+
+  if (!conf)      { err.textContent='Please select a conference.'; err.style.display='block'; return; }
+  if (!microsite) { err.textContent='Please paste the conference microsite content.'; err.style.display='block'; return; }
+
+  // Build flat list with attendee type tagged
+  const allContacts = [
+    ...reContacts.edge.filter(c=>c.fname||c.lname).map(c=>({...c, attendeeType:'edge'})),
+    ...reContacts.roundtable.filter(c=>c.fname||c.lname).map(c=>({...c, attendeeType:'roundtable'}))
+  ];
+  if (!allContacts.length) { err.textContent='Please add at least one contact to either list.'; err.style.display='block'; return; }
+
+  reProspects = allContacts.map((c,i) => ({id:'r'+i, contact:c, status:'loading', data:null}));
+
+  // Stats
+  const edgeN = allContacts.filter(c=>c.attendeeType==='edge').length;
+  const rtN   = allContacts.filter(c=>c.attendeeType==='roundtable').length;
+  document.getElementById('re-stat-total').textContent = allContacts.length;
+  document.getElementById('re-stat-edge').textContent  = edgeN;
+  document.getElementById('re-stat-rt').textContent    = rtN;
+  document.getElementById('re-stat-done').textContent  = '0';
+
+  document.getElementById('re-res-title').textContent = conf;
+  document.getElementById('re-res-sub').textContent   = 'Generating ' + allContacts.length + ' contact'+(allContacts.length>1?'s':'')+'...';
+  document.getElementById('re-cards-slot').innerHTML  = '';
+  document.getElementById('re-nav-items').innerHTML   = '';
+
+  showView('re-results');
+
+  // Pre-populate nav + skeletons
+  reProspects.forEach(p => {
+    addReNavItem(p.id, p.contact);
+    document.getElementById('re-cards-slot').insertAdjacentHTML('beforeend', reSkeletonHTML(p.id, p.contact));
+  });
+
+  let doneCount = 0;
+  for (const p of reProspects) {
+    try {
+      const result = await callClaudeReEngagement(p.contact, conf, eventDate, microsite);
+      const sk = document.getElementById('resk-'+p.id);
+      if (sk) sk.outerHTML = reCardHTML(result, p.id, p.contact);
+      p.status = 'done';
+      p.data   = result;
+      updateReNavDone(p.id, p.contact);
+      doneCount++;
+      document.getElementById('re-stat-done').textContent = doneCount;
+      document.getElementById('re-res-sub').textContent   = doneCount+' of '+reProspects.length+' ready';
+    } catch(e) {
+      p.status = 'error';
+      updateReNavError(p.id);
+      const sk = document.getElementById('resk-'+p.id);
+      if (sk) sk.outerHTML = `<div class="re-card" id="recard-${p.id}" style="padding:1.5rem"><div style="font-size:13px;font-weight:600">${esc(p.contact.fname)} ${esc(p.contact.lname)}</div><div style="font-size:12px;color:var(--red);margin-top:4px">Failed: ${esc(e.message)}</div></div>`;
+    }
+  }
+  document.getElementById('re-res-sub').textContent = doneCount+' contact'+(doneCount>1?'s':'')+' complete';
+}
+
+// ── Claude call ───────────────────────────────────────────────────────────
+async function callClaudeReEngagement(contact, conf, eventDate, microsite) {
+  const isEdge = contact.attendeeType === 'edge';
+  const attendeeContext = isEdge
+    ? 'This person attended a previous ADAPT Edge conference. They know the format and the calibre of the room.'
+    : 'This person attended an ADAPT executive roundtable. They experienced the peer conversation quality at a smaller scale. This is the full conference.';
+
+  const sys = `You are writing re-engagement outreach on behalf of the ADAPT team for an upcoming Edge conference.
+
+ADAPT runs invitation-only peer conferences for Australia and New Zealand's most senior technology and business leaders. These are not vendor events. No sales pitches. Pure peer exchange, world-class speakers, and ADAPT's proprietary A/NZ benchmarks.
+
+THE VOICE AND PHILOSOPHY — READ THIS CAREFULLY:
+The copy must feel like a direct, confident message from a senior peer — not a sales email. The programme sells itself. Your job is to get out of the way and let it.
+
+The core idea is: "Be part of it." The person should feel they are being invited back into something important, something that matters to their industry, something their peers are already attending. They should feel the pull of not wanting to miss it — not pressure to buy something.
+
+THE OPENING RULE — THIS IS THE MOST IMPORTANT INSTRUCTION:
+When personal context is provided, the email MUST open with that person's specific situation. Not an industry observation. Not a generic pain point. Their work. Their challenge. Their company. In the first sentence.
+
+The formula is: "Given [what they are doing / navigating / dealing with right now], [specific session or speaker] is directly relevant to where you sit."
+
+Then broaden to the room and the programme. The personal hook earns the reader's attention. The programme keeps it.
+
+When no context is provided, open with the most specific role-and-sector observation you can make — not a generic AI statement that could apply to any executive. A CHRO at a health insurer is navigating workforce automation in claims and member services. A CPO at a bank is managing reskilling across tens of thousands of people. Name the specific situation, not the generic trend.
+
+WHAT GENERIC OPENERS LOOK LIKE — NEVER WRITE THESE:
+- "Most AI workplace initiatives produce insights. Far fewer produce the upskilling programmes..."
+- "Across A/NZ enterprise right now, digital transformation programmes are outpacing..."
+- "Most organisations are still writing their AI workforce strategy..."
+These are failures. They could be sent to anyone. They signal that no research was done.
+
+WHAT GOOD OPENERS LOOK LIKE:
+- "Given the work you are doing to operationalise ResMed's AI-first model across Supply Chain and enabling functions, the session on co-designing the AI operating model with HR at the table, rather than after the fact, is directly relevant to where you sit right now."
+- "Teachers Health is navigating the same pressure every major health insurer faces right now: how far do you automate member-facing services before you erode the trust that defines the brand? That question sits at the centre of People & AI Edge on 13 October."
+- "Three years into the role at AMP, you've rebuilt the people function through one of the most public corporate transformations in Australian finance. The next wave — agentic AI entering the workforce — is a different kind of change management challenge. Catherine Walsh (CPO, Qantas) and Karen Lonergan (CPO, PwC) are both presenting on exactly that."
+
+WHAT THIS VOICE SOUNDS LIKE:
+- First sentence names their specific situation. Not the industry. Them.
+- Second sentence connects that situation to a specific session or speaker by name.
+- Then: who's in the room, expressed as collective significance.
+- Speakers listed plainly: name, title, organisation. No adjectives.
+- Close short and direct. "Reply here." "Pre-register." "Be part of it." No apology.
+
+BANNED OPENERS — FIRST SENTENCE CANNOT START WITH ANY OF THESE:
+"Most...", "Across A/NZ...", "As AI...", "In a world where...", "The pace of...", "Few topics...", "Every organisation...", "The challenge facing...", "AI is reshaping..."
+
+BANNED PHRASES — ANY OF THESE IS A FAILURE:
+"I'd love to...", "We'd love to...", "I wanted to invite you", "I am reaching out", "Hope this finds you well", "I stumbled across", "In today's rapidly evolving", "I'd like to extend", "would be wonderful", "exciting opportunity", "I'd be remiss", "it would mean a lot", "we'd be honoured"
+
+BANNED WORDS:
+delve, leverage, elevate, testament, bespoke, dynamic, spearhead, unlock, foster, navigate, landscape, paradigm shift, revolutionary, game-changer, cutting-edge, transformative, robust, seamless, holistic, synergy, curated, tailored, empower, world-class, best-in-class
+
+MANDATORY COPY RULES:
+- Australian English throughout: -ise not -ize, colour, organisation, programme, recognise, behaviour
+- No em dashes (— or –). Use commas or full stops.
+- Never say "ADAPT's conference" — use the conference name directly.
+- Use "A/NZ" not "ANZ" in body copy.
+- Scarcity is access-based, never seat-count pressure: "your pass is on hold", "the cohort is forming", "we open to the broader community next week" — never "only X seats left".
+- Reference specific speakers, session themes, and statistics from the microsite content provided. Be precise. Generic copy is a failure.
+- Community framing: always express who is in the room in terms of what they collectively represent. Pull from the microsite.
+
+HOW TO USE THE PERSONAL CONTEXT / SIGNALS FIELD:
+This is what unlocks personalisation. Read it carefully before writing a single word. Then ask: what is the single most specific thing this person is working on right now? What session on the programme speaks most directly to that? Open with the intersection — not the industry context, the personal one.
+
+If context mentions a specific initiative, programme, or company situation: name it in sentence one.
+If context mentions a recent role change: open with the particular pressure that comes with their first 12-18 months.
+If context mentions a LinkedIn post or public statement: reference the substance of what they said.
+If context is thin: use role seniority, company size, and sector to make the most specific inference you can. Do not fall back to generic industry pain.
+
+${attendeeContext}
+
+===
+COPY EXAMPLES — MATCH THIS VOICE EXACTLY
+These are approved ADAPT examples. Study the structure, rhythm, and tone. Your output must be indistinguishable from these in quality and style.
+
+EMAIL EXAMPLE 1 (generic — no context provided, but still specific to role/sector):
+Subject: Your role is changing. Here's who's working through it with you.
+
+[First Name],
+
+Workforce readiness is the number one barrier to scaling AI across Australian enterprise right now. Not technology. Not budget. People.
+
+That puts your function at the centre of the most consequential business challenge of the decade — and most organisations haven't built a people strategy that reflects it yet.
+
+On 13 October in Sydney, ADAPT is bringing together some of Australia's most senior CHROs and Chief People Officers for People & AI Edge: The Human in the Loop & Managing Digital Colleagues.
+
+The day is built around questions that are live problems right now:
+
+→ Agents are entering the workforce. Who owns them — HR, IT, or Risk?
+→ AI displaces roles faster than reskilling timelines allow. What's the real plan?
+→ Every major org has a workforce strategy document. Most of them are already obsolete.
+
+Speakers confirmed: Karen Lonergan (CPO, PwC), Catherine Walsh (CPO, Qantas), Rebecca Nash (CPO, AMP), Dr Juliette Tobias-Webb (AI & Cyber Futures Centre), David Walker (former Group CTO, Westpac & DBS).
+
+If you'd like to know more, reply here or pre-register: [LINK]
+
+Ideally we'd hear from you by [DATE].
+
+---
+
+EMAIL EXAMPLE 2 (generic — peer framing without specific context):
+Subject: Your peers have already made some of these calls.
+
+[First Name],
+
+Some of Australia's most senior people leaders have already navigated the first wave of AI-driven workforce change. Roles redesigned. Structures rewritten. Cultures stress-tested.
+
+On 13 October at The Fullerton Sydney, People & AI Edge brings them together for the hardest conversation in the people function right now: The Human in the Loop & Managing Digital Colleagues.
+
+The gap between organisations managing AI transformation well and those absorbing the damage comes down to whether the people function was at the design table, or handed the brief after decisions were made.
+
+Speakers include Karen Lonergan (PwC), Catherine Walsh (Qantas), Rebecca Nash (AMP), Dr Juliette Tobias-Webb (AI & Cyber Futures Centre), and David Walker (former Group CTO, Westpac & DBS).
+
+Across the day: keynote fireside, expert panels, peer roundtables, and 1:1 meetings — all built around the actual decisions you're making this year.
+
+This is the third People Edge. The conversation has earned its reputation. We'd like you to be part of it.
+
+Pre-register here: [LINK]
+
+Ideally by [DATE].
+
+---
+
+SIGNAL-FIRST EMAIL EXAMPLE (context provided — this is the target when signals are available):
+Subject: The session on AI operating model design was written for where you sit right now.
+
+[First Name],
+
+Given the work you are doing to operationalise ResMed's AI-first model across Supply Chain and enabling functions, the session on co-designing the AI operating model with HR at the table, rather than after the fact, is directly relevant to where you sit right now.
+
+That is one of the core debates at People & AI Edge on 13 October in Sydney — joining over 150 of Australia's most senior CHROs and Chief People Officers, representing more than 10% of the national workforce.
+
+Karen Lonergan (CPO, PwC) is presenting on exactly this: how the people function earns its place at the design table before AI decisions are made, not after. Catherine Walsh (CPO, Qantas) brings a practitioner's view on leading 27,000 people through AI-driven operational change.
+
+You've qualified for a complimentary return pass. Reply here to confirm your place.
+
+Ideally by [DATE].
+
+---
+
+LINKEDIN EXAMPLE:
+10% of Australia's national workforce. One room. One day.
+
+Over 150 of Australia's most senior CHROs and Chief People Officers — representing more than 10% of the national workforce — will gather at People & AI Edge on 13 October in Sydney.
+
+The theme: The Human in the Loop & Managing Digital Colleagues.
+
+This is the third People Edge. The most urgent yet. Agentic AI is reshaping roles, accountability, and culture faster than most workforce strategies were written to handle.
+
+160 seats. Invite-only. Be part of it.
+
+adapt.com.au/events/people-edge
+
+===
+WHAT THESE EXAMPLES TEACH YOU:
+1. When context exists: the first sentence names their specific work, initiative, or situation. Not the industry. Them.
+2. The personal hook leads directly to the specific session or speaker that addresses it. Name both.
+3. Only then does the email broaden to who's in the room and the community stat.
+4. When no context exists, the examples above are the floor — but still push for sector or role specificity over generic AI pain.
+5. Speakers listed plainly: name, title, organisation. No adjectives.
+6. The close is 1-2 lines. Direct. "Be part of it" is the energy.
+7. Arrow lists (→) work well for session question formats. Use them when listing live problems or debate themes.
+8. The signal-first example shows the ideal email when you have context. The first two show the minimum acceptable when you don't.
+
+Now write for the specific conference, contact, and context provided. If context is available, the signal-first example is your structural model. If not, the first two examples are your floor.
+===
+
+ASSET SPECS:
+Email 1 (Re-invitation): If context available — open with their specific situation, name the programme connection, then the room and speakers. If no context — open with the most specific role/sector observation you can make, then the room and speakers. State what they have (complimentary pass, qualified return). Direct RSVP close. 130-160 words.
+Email 2 (Programme depth): Lead with 2-3 specific sessions or speakers from the microsite mapped directly to their context or role. Include a benchmark stat or data point if available in the microsite. "Your pass is on hold" close. 140-170 words.
+Email 3 (Final): Short, direct. One programme highlight tied to their specific situation. Cohort-closing framing. No apology. 80-100 words.
+SMS 1: Reference their context or role situation and name the event. Max 160 characters.
+SMS 2: Cohort-closing urgency. Max 160 characters.
+LinkedIn: If context available — open with their specific situation and the programme connection. If not — open on community stat. Reference their previous ADAPT experience in one sentence. Direct close. Under 200 words.
+Video Script: Natural voicemail delivery. [Bracketed notes]. Name yourself and the event. If context available — lead with one specific reason this programme is relevant to them right now, then the community stat. If not — lead with the community stat. Reference their previous attendance. Close with "check the email from my team." 45-60 seconds.
+
+RETURN valid JSON only. No markdown fences, no preamble.
+
+{
+  "conference_summary": "1-2 sentences on what this event is and why it matters",
+  "key_themes": ["string"],
+  "context_to_programme_bridge": "The single clearest connection between their personal context and a specific session or speaker. null if no context provided.",
+  "why_attend_hook": "The single sharpest reason this person should be in that room, one sentence",
+  "outreach": {
+    "email_1": { "subject": "string", "body": "string" },
+    "email_2": { "subject": "string", "body": "string" },
+    "email_3": { "subject": "string", "body": "string" },
+    "sms_1": "string",
+    "sms_2": "string",
+    "linkedin": "string",
+    "video_script": "string"
+  }
+}`;
+
+  const parts = (contact.titleco||'').split(' · ');
+  const title   = parts[0]||'';
+  const company = parts.slice(1).join(' · ')||'';
+
+  const user = `Conference: ${conf}${eventDate ? '\nEvent Date: '+eventDate : ''}
+Contact: ${contact.fname} ${contact.lname}
+Title: ${title}
+Company: ${company}
+Attendance history: ${isEdge ? 'Previous Edge conference attendee' : 'Previous ADAPT roundtable attendee'}
+${contact.hubspot ? 'HubSpot ID: '+contact.hubspot : ''}
+${contact.context ? '\nPERSONAL CONTEXT (use this to personalise every asset — reference it directly, do not ignore it):\n'+contact.context : '\nNo personal context provided — personalise based on their role and company only.'}
+
+CONFERENCE MICROSITE CONTENT:
+${microsite}
+
+Write the complete re-engagement copy pack for this contact. Apply every rule exactly. The programme sells itself — get out of the way and let it.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:5000, system:sys, messages:[{role:'user',content:user}]})
+  });
+
+  if (!resp.ok) { const e=await resp.json().catch(()=>{}); throw new Error(e?.error?.message||'HTTP '+resp.status); }
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = (data.content||[]).map(b=>b.text||'').join('');
+  return JSON.parse(raw.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim());
+}
+
+// ── Nav helpers ───────────────────────────────────────────────────────────
+function addReNavItem(id, contact) {
+  const el  = document.getElementById('re-nav-items');
+  const div = document.createElement('div');
+  div.id        = 're-nav-'+id;
+  div.className = 're-nav-item';
+  div.onclick   = () => scrollToReCard(id);
+  const isEdge  = contact.attendeeType === 'edge';
+  div.innerHTML = `
+    <div class="nav-avatar loading" id="renavav-${id}">${initials(contact.fname+' '+contact.lname)}</div>
+    <div style="flex:1;min-width:0">
+      <div class="nav-name">${esc(contact.fname)} ${esc(contact.lname)}</div>
+      <div class="nav-meta">${esc(contact.titleco||'')}</div>
+    </div>
+    <div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;flex-shrink:0;${isEdge?'background:var(--red-light);color:var(--red)':'background:var(--blue-light);color:var(--blue)'}">${isEdge?'Edge':'RT'}</div>
+    <div class="nav-status loading" id="renavst-${id}"></div>`;
+  el.appendChild(div);
+}
+
+function updateReNavDone(id, contact) {
+  const av = document.getElementById('renavav-'+id);
+  const st = document.getElementById('renavst-'+id);
+  if (av) { av.className = 'nav-avatar hot'; }
+  if (st) { st.className = 'nav-status done'; }
+}
+
+function updateReNavError(id) {
+  const st = document.getElementById('renavst-'+id);
+  if (st) st.className = 'nav-status error';
+}
+
+function scrollToReCard(id) {
+  const card = document.getElementById('recard-'+id);
+  if (card) {
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+    document.querySelectorAll('.re-nav-item').forEach(el=>el.classList.remove('active'));
+    const item = document.getElementById('re-nav-'+id);
+    if (item) item.classList.add('active');
+    card.style.boxShadow = '0 0 0 2px var(--red)';
+    setTimeout(()=>{ card.style.boxShadow=''; }, 1200);
+  }
+}
+
+// ── HTML builders ─────────────────────────────────────────────────────────
+function reSkeletonHTML(id, contact) {
+  return `<div id="resk-${id}" class="re-card" style="padding:1.75rem">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem">
+      <div class="skeleton" style="width:44px;height:44px;border-radius:50%;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="skeleton" style="height:13px;width:40%;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:10px;width:60%"></div>
+      </div>
+    </div>
+    <div class="skeleton" style="height:5px;width:100%;border-radius:3px;margin-bottom:5px"></div>
+    <div class="skeleton" style="height:5px;width:70%;border-radius:3px;margin-bottom:1.25rem"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="skeleton" style="height:60px;border-radius:8px"></div>
+      <div class="skeleton" style="height:60px;border-radius:8px"></div>
+      <div class="skeleton" style="height:60px;border-radius:8px"></div>
+    </div>
+    <div style="margin-top:1rem;font-size:12px;color:var(--grey-500);text-align:center">Writing copy for ${esc(contact.fname)} ${esc(contact.lname)}...</div>
+  </div>`;
+}
+
+function reCardHTML(result, id, contact) {
+  const isEdge = contact.attendeeType === 'edge';
+  const parts  = (contact.titleco||'').split(' · ');
+  const title  = parts[0]||'';
+  const company = parts.slice(1).join(' · ')||'';
+
+  const tabs = [
+    {id:'e1', label:'Email 1',      subj:result.outreach?.email_1?.subject, body:result.outreach?.email_1?.body},
+    {id:'e2', label:'Email 2',      subj:result.outreach?.email_2?.subject, body:result.outreach?.email_2?.body},
+    {id:'e3', label:'Email 3',      subj:result.outreach?.email_3?.subject, body:result.outreach?.email_3?.body},
+    {id:'sm1',label:'SMS 1',        body:result.outreach?.sms_1},
+    {id:'sm2',label:'SMS 2',        body:result.outreach?.sms_2},
+    {id:'li', label:'LinkedIn',     body:result.outreach?.linkedin},
+    {id:'vid',label:'Video Script', body:result.outreach?.video_script},
+  ];
+
+  const g = 're'+id; // unique tab group prefix
+
+  return `<div class="re-card" id="recard-${id}" onclick="scrollToReCard('${id}')">
+
+    <!-- Head -->
+    <div class="re-card-head">
+      <div class="re-avatar">${initials(contact.fname+' '+contact.lname)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="re-name">${esc(contact.fname)} ${esc(contact.lname)}</div>
+        <div class="re-meta">${title ? esc(title) : ''}${company ? ' · '+esc(company) : ''}</div>
+        ${contact.hubspot ? `<div class="re-hubspot">HubSpot ID: <strong>${esc(contact.hubspot)}</strong></div>` : ''}
+      </div>
+      <div class="re-badge ${isEdge?'':'roundtable'}">${isEdge ? 'Previous Edge Attendee' : 'Previous Roundtable'}</div>
+    </div>
+
+    ${contact.context ? `<div style="padding:0.75rem 1.75rem;background:var(--grey-50);border-bottom:1px solid var(--grey-100);font-size:11.5px;color:var(--grey-700);line-height:1.5"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--grey-500);margin-right:8px">Context used</span>${esc(contact.context)}</div>` : ''}
+
+    <!-- Conference context -->
+    ${result.conference_summary || result.why_attend_hook ? `
+    <div class="re-conf-strip">
+      ${result.why_attend_hook ? `<div class="re-conf-item"><strong>Why attend:</strong> ${esc(result.why_attend_hook)}</div>` : ''}
+      ${result.context_to_programme_bridge ? `<div class="re-conf-item" style="border-top:1px solid var(--grey-200);padding-top:8px;margin-top:4px;width:100%"><strong style="color:var(--red)">Signal → Programme:</strong> ${esc(result.context_to_programme_bridge)}</div>` : ''}
+      ${(result.key_themes||[]).length ? `<div class="re-conf-item" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><strong>Key themes:</strong> ${result.key_themes.map(t=>`<span style="font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:2px 7px;background:var(--black);color:rgba(255,255,255,0.7);border-radius:3px">${esc(t)}</span>`).join('')}</div>` : ''}
+    </div>` : ''}
+
+    <!-- Asset tabs -->
+    <div class="re-tab-bar">
+      ${tabs.map((t,ti)=>`<button class="re-tab ${ti===0?'active':''}" onclick="switchReTab('${g}','${t.id}')" data-regroup="${g}" data-retab="${t.id}">${esc(t.label)}</button>`).join('')}
+    </div>
+    ${tabs.map((t,ti)=>{
+      const cv = t.subj ? 'Subject: '+t.subj+'\n\n'+t.body : (t.body||'');
+      const wc = (t.body||'').split(/\s+/).filter(Boolean).length;
+      return `<div class="re-tab-pane ${ti===0?'active':''}" data-regroup="${g}" data-repane="${t.id}">
+        ${t.subj ? `<div class="subj-row">Subject: <span>${esc(t.subj)}</span></div>` : ''}
+        <div class="body-box">${esc(t.body||'')}</div>
+        <div class="copy-row">
+          <button class="btn-sm" onclick="doCopy(this,${JSON.stringify(cv)})">⎘ Copy</button>
+          <span class="wc">${wc} words</span>
+        </div>
+      </div>`;
+    }).join('')}
+
+  </div>`;
+}
+
+function switchReTab(g, id) {
+  document.querySelectorAll(`[data-regroup="${g}"].re-tab`).forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll(`[data-regroup="${g}"].re-tab-pane`).forEach(p=>p.classList.remove('active'));
+  const tEl = document.querySelector(`[data-regroup="${g}"][data-retab="${id}"]`);
+  const pEl = document.querySelector(`[data-regroup="${g}"][data-repane="${id}"]`);
+  if (tEl) tEl.classList.add('active');
+  if (pEl) pEl.classList.add('active');
+}
+
+
+</script>
+</body>
+</html>

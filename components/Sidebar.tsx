@@ -65,6 +65,14 @@ function IconChevronLeft() {
   )
 }
 
+function IconZap() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" style={{ flexShrink: 0 }}>
+      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
 function IconSignOut() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" style={{ flexShrink: 0 }}>
@@ -99,6 +107,7 @@ export default function Sidebar() {
   const campaignsIconRef = useRef<HTMLDivElement>(null)
 
   const isCampaignsActive = pathname.startsWith('/campaigns')
+  const isEdgeActive = pathname.startsWith('/edge')
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed')
@@ -305,6 +314,33 @@ export default function Sidebar() {
             )}
           </>
         )}
+
+        {/* Edge */}
+        <Link
+          href="/edge"
+          style={{
+            display: 'flex', alignItems: 'center',
+            gap: collapsed ? 0 : '10px',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            padding: collapsed ? '8px' : '8px 10px',
+            borderRadius: '6px',
+            color: isEdgeActive ? '#FFFFFF' : '#6B7280',
+            backgroundColor: isEdgeActive ? '#E7534F' : 'transparent',
+            textDecoration: 'none', fontSize: '14px', fontWeight: '500',
+            overflow: 'hidden',
+          }}
+          className={!isEdgeActive ? 'hover:bg-[#F3F3F1] hover:text-[#0D0D0D] transition-colors' : ''}
+          title="ADAPT Edge"
+        >
+          <span style={{ color: isEdgeActive ? '#FFFFFF' : '#6B7280', flexShrink: 0 }}>
+            <IconZap />
+          </span>
+          {!collapsed && (
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Edge
+            </span>
+          )}
+        </Link>
 
         {/* Disabled items */}
         {DISABLED_ITEMS.map(item => (
