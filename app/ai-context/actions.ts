@@ -16,6 +16,7 @@ export interface ProspectIntelligence {
   public_presence: string
   potential_pain_points: string
   notable_achievements: string
+  confidence_score: number
 }
 
 export interface ProspectContext {
@@ -54,7 +55,7 @@ export async function runProspectIntelligence(
   // Load the prospect (RLS ensures caller owns it or is admin)
   const { data: prospect, error: fetchError } = await supabase
     .from('prospects')
-    .select('id, full_name, title, company, email')
+    .select('id, full_name, title, company, email, linkedin_url')
     .eq('id', prospectId)
     .single()
 
@@ -67,13 +68,21 @@ export async function runProspectIntelligence(
     .eq('id', prospectId)
 
   try {
-    const userMessage = `Research this person and return structured intelligence as raw JSON only.
+    const linkedinLine = (prospect as { linkedin_url?: string | null }).linkedin_url
+      ? `LinkedIn Profile: ${(prospect as { linkedin_url?: string | null }).linkedin_url}\nSearch this URL first — treat it as the primary identifier and ground truth for this person.\n`
+      : ''
+
+    const userMessage = `Research this specific individual and return structured intelligence as raw JSON only.
 No preamble, no markdown fences, just the JSON object.
 
-Person: ${prospect.full_name ?? 'Unknown'}
-Title: ${prospect.title ?? 'Unknown'}
+${linkedinLine}Name: ${prospect.full_name ?? 'Unknown'}
+Job Title: ${prospect.title ?? 'Unknown'}
 Company: ${prospect.company ?? 'Unknown'}
 ${prospect.email ? `Email: ${prospect.email}` : ''}
+
+Use all identifiers above (LinkedIn URL if provided, name, company, job title) together to confidently identify the correct individual. Common names require careful disambiguation — always confirm the company and role match.
+
+IMPORTANT: If you cannot confidently identify this specific individual, say so clearly in each field rather than describing multiple people with the same name or making assumptions about who they are.
 
 Return this exact JSON structure with no extra keys:
 {
@@ -83,8 +92,11 @@ Return this exact JSON structure with no extra keys:
   "company_context": "...",
   "public_presence": "...",
   "potential_pain_points": "...",
-  "notable_achievements": "..."
-}`
+  "notable_achievements": "...",
+  "confidence_score": 5
+}
+
+confidence_score must be an integer 1–5: 5 = uniquely identified with high certainty; 3 = reasonably confident but some ambiguity; 1 = could not confidently identify this specific individual.`
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -276,6 +288,7 @@ export async function insertAiContextProspects(
     title: string | null
     company: string | null
     email: string | null
+    linkedin_url?: string | null
   }>
 ): Promise<{ inserted: number; error?: string }> {
   const userId = await requireAuth()
@@ -291,6 +304,7 @@ export async function insertAiContextProspects(
         title: r.title || null,
         company: r.company || null,
         email: r.email || null,
+        linkedin_url: r.linkedin_url || null,
       }))
     )
     .select('id')
@@ -305,7 +319,7 @@ export async function getAiContextProspects(): Promise<AiContextProspect[]> {
 
   const { data } = await supabase
     .from('prospects')
-    .select('id, full_name, title, company, email, assigned_to, intelligence, intelligence_status, intelligence_updated_at, created_at')
+    .select('id, full_name, title, company, email, linkedin_url, assigned_to, intelligence, intelligence_status, intelligence_updated_at, created_at')
     .is('campaign_id', null)
     .eq('assigned_to', userId)
     .order('created_at', { ascending: false })
