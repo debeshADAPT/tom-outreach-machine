@@ -89,7 +89,7 @@ Return this exact JSON structure with no extra keys:
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' } as Parameters<typeof anthropic.messages.create>[0]['tools'][number]],
+      tools: [{ type: 'web_search_20250305', name: 'web_search' } as unknown as NonNullable<Parameters<typeof anthropic.messages.create>[0]['tools']>[number]],
       messages: [{ role: 'user', content: userMessage }],
     })
 
