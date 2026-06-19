@@ -73,6 +73,14 @@ function IconZap() {
   )
 }
 
+function IconSparkles() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" style={{ flexShrink: 0 }}>
+      <path d="M10 2a.75.75 0 01.712.513l1.3 3.9 3.9 1.3a.75.75 0 010 1.424l-3.9 1.3-1.3 3.9a.75.75 0 01-1.424 0l-1.3-3.9-3.9-1.3a.75.75 0 010-1.424l3.9-1.3 1.3-3.9A.75.75 0 0110 2zM4 14a.5.5 0 01.474.342l.526 1.578 1.578.526a.5.5 0 010 .948l-1.578.526-.526 1.578a.5.5 0 01-.948 0l-.526-1.578-1.578-.526a.5.5 0 010-.948l1.578-.526.526-1.578A.5.5 0 014 14zM16 1a.5.5 0 01.474.342l.526 1.578 1.578.526a.5.5 0 010 .948l-1.578.526-.526 1.578a.5.5 0 01-.948 0l-.526-1.578-1.578-.526a.5.5 0 010-.948l1.578-.526.526-1.578A.5.5 0 0116 1z" />
+    </svg>
+  )
+}
+
 function IconSignOut() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" style={{ flexShrink: 0 }}>
@@ -107,6 +115,7 @@ export default function Sidebar() {
   const campaignsIconRef = useRef<HTMLDivElement>(null)
 
   const isCampaignsActive = pathname.startsWith('/campaigns')
+  const isAiContextActive = pathname.startsWith('/ai-context')
   const isEdgeActive = pathname.startsWith('/edge')
 
   useEffect(() => {
@@ -314,6 +323,33 @@ export default function Sidebar() {
             )}
           </>
         )}
+
+        {/* AI Context Creator */}
+        <Link
+          href="/ai-context"
+          style={{
+            display: 'flex', alignItems: 'center',
+            gap: collapsed ? 0 : '10px',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            padding: collapsed ? '8px' : '8px 10px',
+            borderRadius: '6px',
+            color: isAiContextActive ? '#FFFFFF' : '#6B7280',
+            backgroundColor: isAiContextActive ? '#E7534F' : 'transparent',
+            textDecoration: 'none', fontSize: '14px', fontWeight: '500',
+            overflow: 'hidden',
+          }}
+          className={!isAiContextActive ? 'hover:bg-[#F3F3F1] hover:text-[#0D0D0D] transition-colors' : ''}
+          title="AI Context Creator"
+        >
+          <span style={{ color: isAiContextActive ? '#FFFFFF' : '#6B7280', flexShrink: 0 }}>
+            <IconSparkles />
+          </span>
+          {!collapsed && (
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              AI Context
+            </span>
+          )}
+        </Link>
 
         {/* Edge */}
         <Link
