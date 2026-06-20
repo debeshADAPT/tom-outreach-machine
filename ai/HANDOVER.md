@@ -148,5 +148,62 @@ Enable Realtime on `prospect_contexts` in Supabase Dashboard:
 
 ---
 
+## Session: 2026-06-20 — AI Context Creator iteration (committed + pushed, Vercel deployed)
+
+### What changed
+
+Three rounds of fixes and improvements to the AI Context Creator.
+
+**TypeScript / build fix** — `actions.ts` line 92 had `TS2537` on the `web_search` tool cast. Fixed with `as unknown as NonNullable<...>[number]`. This was blocking the Vercel build and is why changes weren't appearing in production.
+
+**CSV column mapping** (`app/ai-context/page.tsx`):
+- Upload now shows a mapping screen instead of importing immediately
+- 5 fields: First Name *, Last Name *, Company, Job Title, LinkedIn URL
+- Best-guess pre-selection (case-insensitive substring match on headers); user can override any dropdown
+- "— Not mapped —" option on all non-required fields; required fields validated on confirm
+- "Confirm & Import" inserts using confirmed mapping; list replaced (not appended) after insert
+
+**Phase 1 research prompt** (`app/ai-context/actions.ts`):
+- LinkedIn URL sent first with "treat as primary identifier and ground truth" instruction
+- Added: "If you cannot confidently identify this specific individual, say so clearly in each field"
+- `confidence_score` (1–5 integer) added to JSON output structure and `ProspectIntelligence` type
+- Displayed as colour-coded badge in intelligence panel (green ≥4, amber =3, red ≤2)
+
+**`linkedin_url` column** (`supabase/migrations/007_linkedin_url.sql`):
+- Column was referenced in code but never existed in DB — caused schema cache error on load
+- Migration adds `linkedin_url text` to `prospects`; threaded through insert, select, and research fetch
+
+### Files touched
+```
+new:      supabase/migrations/007_linkedin_url.sql
+modified: app/ai-context/actions.ts
+modified: app/ai-context/page.tsx
+```
+
+### Current status
+
+Code deployed. **007 migration must be run before the page works.**
+
+**Mandatory manual step:**
+```sql
+-- Supabase Dashboard → SQL Editor
+ALTER TABLE public.prospects ADD COLUMN IF NOT EXISTS linkedin_url text;
+```
+
+Realtime on `prospect_contexts` also still needs enabling (Table Editor → prospect_contexts → Enable Realtime).
+
+---
+
+## Unresolved Issues
+- **Email sending not implemented** — email logs and sent counts are mock data. Graph API (Outlook) integration not started.
+- **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
+- **Contacts / Email Templates / Connectors** nav items are disabled stubs.
+- **`proxy.ts`** at root is middleware-shaped but never registered as `middleware.ts` — auth relies on server component checks only.
+- **`lib/supabase.js`** — legacy unused client, safe to delete.
+- **`startProspectSequence` / `bulkStartSequences` / `saveSequenceDelays`** — actions exist, no UI trigger.
+- **AI Context Creator — no deduplication on insert** — uploading the same CSV twice creates duplicate prospect rows. No unique constraint on (assigned_to, full_name, company).
+
+---
+
 ## Next Recommended Task
 **Microsoft Graph API email sending.** The sequence UI is complete; the gap is dispatching emails and capturing replies. Add `sendEmail(prospectId, stepKey)` in `app/campaigns/[id]/actions.ts` — calls Graph API, updates `prospects.status` and `prospects.sent_at`. Replies can be polled or webhoooked into a `/api/graph/webhook` route that sets `status = 'replied'`.
