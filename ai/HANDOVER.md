@@ -343,6 +343,32 @@ All code committed and pushed. Deploying to Vercel. No new migrations required.
 
 ---
 
+## Session: 2026-06-21 — Build fix and bug fixes
+
+### What changed
+
+**Vercel build fix** (`app/events/[id]/components/EventDetailClient.tsx` line 307):
+- `hasPrevBrief` was typed as `false | unknown` because `entry.detail?.previous_brief` returns `unknown` (jsonb). TypeScript rejected it in JSX as not assignable to `ReactNode`. Fixed with `!!` coercion to `boolean`.
+
+**AI Context Creator — context history always empty** (`app/ai-context/actions.ts`):
+- `getProspectContextHistory` used `.select('*, profiles(display_name)')`. PostgREST cannot traverse `prospect_contexts.generated_by → auth.users → public.profiles` because `auth` schema is outside PostgREST's scope. The broken embed caused the query to return a 400 error, `data` was null, and history always returned `[]` — even when rows existed in the DB. Fixed with two-step query: fetch rows first, collect unique `generated_by` IDs, query `profiles` separately, merge.
+
+**Event changelog author names always missing** (`app/events/actions.ts`):
+- `getEventById` had the same broken `event_changelog.select('*, profiles(display_name)')` embed. Changelog was returned but author display names were never populated. Fixed with the same two-step pattern.
+
+### Files touched
+```
+modified: app/events/[id]/components/EventDetailClient.tsx
+modified: app/ai-context/actions.ts
+modified: app/events/actions.ts
+```
+
+### Current status
+
+All code committed and pushed. Deployed to Vercel. No new migrations required.
+
+---
+
 ## Unresolved Issues
 - **Email sending not implemented** — email logs and sent counts are mock data. Graph API (Outlook) integration not started.
 - **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
@@ -353,7 +379,7 @@ All code committed and pushed. Deploying to Vercel. No new migrations required.
 - **AI Context Creator — no deduplication on insert** — uploading the same CSV twice creates duplicate prospect rows. No unique constraint on (assigned_to, full_name, company).
 - **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()` after returning. Reliable on Fluid Compute; may not complete on a cold-start termination. Resync Brief from the detail page is synchronous and always reliable.
 - **Events Hub — regex-based HTML extraction** — `extractStructuredContent` uses regex, not a DOM parser. Nested tags of the same type will close early. Good enough for event pages; replace with `node-html-parser` if extraction quality degrades.
-- **EventDetailClient — two pre-existing TS2322 errors** at lines 325 and 334 (`Type 'unknown' is not assignable to type 'ReactNode'`). Not introduced by recent changes; not blocking build.
+- **User Management — `SUPABASE_SERVICE_ROLE_KEY` must be set in Vercel env vars** — if missing, `/users` throws on load. Add via Vercel Dashboard → Settings → Environment Variables.
 - **User Management — no role edit** — display name is editable inline but role (admin/staff) can only be changed via direct SQL. Could add a role toggle to `UserRow` if needed.
 
 ---
