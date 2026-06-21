@@ -261,11 +261,27 @@ export async function getProspectContextHistory(
 
   const { data } = await supabase
     .from('prospect_contexts')
-    .select('*, profiles(display_name)')
+    .select('*')
     .eq('prospect_id', prospectId)
     .order('created_at', { ascending: false })
 
-  return (data ?? []) as ProspectContext[]
+  if (!data || data.length === 0) return []
+
+  // Two-step join: generated_by → auth.users (not accessible to PostgREST) → profiles
+  const userIds = [...new Set(data.map(c => c.generated_by as string))]
+  const { data: profileRows } = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', userIds)
+
+  const profilesMap = Object.fromEntries(
+    (profileRows ?? []).map((p: { id: string; display_name: string | null }) => [p.id, p.display_name ?? null])
+  )
+
+  return data.map(c => ({
+    ...c,
+    profiles: { display_name: profilesMap[c.generated_by as string] ?? null },
+  })) as ProspectContext[]
 }
 
 // ─── Delete Context ───────────────────────────────────────────────────────────

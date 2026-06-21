@@ -509,11 +509,11 @@ export async function getEventById(eventId: string): Promise<{
   await requireAuth()
   const supabase = await createSupabaseServer()
 
-  const [{ data: event }, { data: changelog }, { data: assignments }] = await Promise.all([
+  const [{ data: event }, { data: changelogRaw }, { data: assignments }] = await Promise.all([
     supabase.from('events').select('*').eq('id', eventId).single(),
     supabase
       .from('event_changelog')
-      .select('*, profiles(display_name)')
+      .select('*')
       .eq('event_id', eventId)
       .order('changed_at', { ascending: false }),
     supabase
@@ -524,6 +524,7 @@ export async function getEventById(eventId: string): Promise<{
 
   if (!event) return { event: null, changelog: [] }
 
+  // Two-step join for rep names (PostgREST cannot traverse auth.users → public.profiles)
   const repUserIds = [...new Set((assignments ?? []).map(a => a.user_id))]
   const { data: repProfiles } = repUserIds.length > 0
     ? await supabase.from('profiles').select('id, display_name').in('id', repUserIds)
@@ -539,8 +540,25 @@ export async function getEventById(eventId: string): Promise<{
     campaign_id:  a.campaign_id,
   }))
 
+  // Two-step join for changelog author names
+  const changelogUserIds = [...new Set(
+    (changelogRaw ?? []).map(c => c.changed_by as string).filter(Boolean)
+  )]
+  const { data: changelogProfiles } = changelogUserIds.length > 0
+    ? await supabase.from('profiles').select('id, display_name').in('id', changelogUserIds)
+    : { data: [] }
+
+  const changelogProfilesMap = Object.fromEntries(
+    (changelogProfiles ?? []).map((p: { id: string; display_name: string | null }) => [p.id, p.display_name ?? null])
+  )
+
+  const changelog: EventChangelogEntry[] = (changelogRaw ?? []).map(c => ({
+    ...(c as EventChangelogEntry),
+    profiles: c.changed_by ? { display_name: changelogProfilesMap[c.changed_by as string] ?? null } : undefined,
+  }))
+
   return {
     event:     { ...(event as Event), assignedReps },
-    changelog: (changelog ?? []) as EventChangelogEntry[],
+    changelog,
   }
 }
