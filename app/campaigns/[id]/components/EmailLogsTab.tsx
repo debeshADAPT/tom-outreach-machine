@@ -137,8 +137,9 @@ function StatusPill({ status }: { status: EmailLog['status'] }) {
   const s = map[status]
   return (
     <span style={{
-      padding: '3px 10px', borderRadius: '20px', fontSize: '12px',
-      fontWeight: '500', backgroundColor: s.bg, color: s.color, whiteSpace: 'nowrap',
+      padding: '2px 8px', borderRadius: '2px', fontSize: '11px',
+      fontWeight: '600', backgroundColor: s.bg, color: s.color, whiteSpace: 'nowrap',
+      letterSpacing: '0.05em', textTransform: 'uppercase',
     }}>
       {s.label}
     </span>
@@ -164,9 +165,9 @@ function SortableHeader({
       onClick={() => onSort(col)}
       style={{
         padding: '11px 16px', textAlign: 'left', fontSize: '12px',
-        fontWeight: '600', color: isActive ? '#0D0D0D' : '#6B7280',
-        textTransform: 'uppercase', letterSpacing: '0.06em',
-        whiteSpace: 'nowrap', borderBottom: '1px solid #E5E5E5',
+        fontWeight: '600', color: isActive ? '#0A0A0A' : '#9A9A9A',
+        textTransform: 'uppercase', letterSpacing: '0.08em',
+        whiteSpace: 'nowrap', borderBottom: '1px solid #E4E4E4',
         cursor: 'pointer', userSelect: 'none',
         ...style,
       }}
@@ -194,35 +195,35 @@ function ExpandedEmailView({ log, repName }: { log: EmailLog; repName: string })
   }
 
   return (
-    <div style={{ backgroundColor: '#F7F6F3', borderTop: '1px solid #E5E5E5', padding: '16px 20px' }}>
+    <div style={{ backgroundColor: '#F8F8F8', borderTop: '1px solid #E4E4E4', padding: '16px 20px' }}>
       {/* Outlook-style header */}
       <div style={{ marginBottom: '14px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr', rowGap: '5px', fontSize: '13px' }}>
-          <span style={{ color: '#9CA3AF', fontWeight: '500', paddingTop: '1px' }}>To:</span>
-          <span style={{ color: '#0D0D0D' }}>
+          <span style={{ color: '#9A9A9A', fontWeight: '500', paddingTop: '1px' }}>To:</span>
+          <span style={{ color: '#0A0A0A' }}>
             {log.prospectName}
-            {log.company !== '—' && <span style={{ color: '#6B7280' }}> · {log.company}</span>}
-            {log.prospectEmail && <span style={{ color: '#6B7280' }}> · {log.prospectEmail}</span>}
+            {log.company !== '—' && <span style={{ color: '#5F5F5F' }}> · {log.company}</span>}
+            {log.prospectEmail && <span style={{ color: '#5F5F5F' }}> · {log.prospectEmail}</span>}
           </span>
 
-          <span style={{ color: '#9CA3AF', fontWeight: '500', paddingTop: '1px' }}>From:</span>
-          <span style={{ color: '#0D0D0D' }}>{repName}</span>
+          <span style={{ color: '#9A9A9A', fontWeight: '500', paddingTop: '1px' }}>From:</span>
+          <span style={{ color: '#0A0A0A' }}>{repName}</span>
 
-          <span style={{ color: '#9CA3AF', fontWeight: '500', paddingTop: '1px' }}>Sent:</span>
-          <span style={{ color: '#6B7280' }}>{date} {time}</span>
+          <span style={{ color: '#9A9A9A', fontWeight: '500', paddingTop: '1px' }}>Sent:</span>
+          <span style={{ color: '#5F5F5F' }}>{date} {time}</span>
 
-          <span style={{ color: '#9CA3AF', fontWeight: '500', paddingTop: '1px' }}>Subject:</span>
-          <span style={{ color: '#0D0D0D', fontWeight: '600' }}>{log.subject}</span>
+          <span style={{ color: '#9A9A9A', fontWeight: '500', paddingTop: '1px' }}>Subject:</span>
+          <span style={{ color: '#0A0A0A', fontWeight: '600' }}>{log.subject}</span>
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid #E5E5E5', marginBottom: '14px' }} />
+      <div style={{ borderTop: '1px solid #E4E4E4', marginBottom: '14px' }} />
 
       {/* Email body */}
       <div style={{
-        backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
-        borderRadius: '8px', padding: '16px',
-        fontSize: '13px', color: '#0D0D0D', lineHeight: 1.8,
+        backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4',
+        borderRadius: '2px', padding: '16px',
+        fontSize: '13px', color: '#0A0A0A', lineHeight: 1.8,
         whiteSpace: 'pre-wrap', fontFamily: 'inherit',
         marginBottom: '12px',
       }}>
@@ -231,13 +232,13 @@ function ExpandedEmailView({ log, repName }: { log: EmailLog; repName: string })
 
       {/* Footer */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Sent via TOM · Microsoft Graph</span>
+        <span style={{ fontSize: '11px', color: '#9A9A9A' }}>Sent via SIGNAL · Microsoft Graph</span>
         <button
           onClick={e => { e.stopPropagation(); handleCopy() }}
           style={{
-            padding: '5px 12px', border: '1px solid #E5E5E5', borderRadius: '6px',
+            padding: '4px 10px', border: '1px solid #E4E4E4', borderRadius: '2px',
             backgroundColor: copied ? '#DCFCE7' : '#FFFFFF',
-            color: copied ? '#166534' : '#6B7280',
+            color: copied ? '#166534' : '#5F5F5F',
             fontSize: '12px', cursor: 'pointer',
           }}
         >

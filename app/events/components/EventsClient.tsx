@@ -21,7 +21,7 @@ function Spinner({ size = 14 }: { size?: number }) {
 function BriefBadge({ status }: { status: Event['brief_status'] }) {
   if (!status) {
     return (
-      <span style={{ fontSize: '11px', color: '#9CA3AF', backgroundColor: '#F3F4F6', padding: '2px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: '11px', color: '#9A9A9A', backgroundColor: '#F8F8F8', padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap', border: '1px solid #E4E4E4' }}>
         No Brief
       </span>
     )
@@ -74,7 +74,7 @@ function RepAvatars({ reps }: { reps: NonNullable<Event['assignedReps']> }) {
       {overflow > 0 && (
         <div style={{
           width: 26, height: 26, borderRadius: '50%',
-          backgroundColor: '#E5E5E5', color: '#6B7280',
+          backgroundColor: '#E4E4E4', color: '#5F5F5F',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '10px', fontWeight: '600',
           border: '2px solid #FFFFFF', marginLeft: -8, flexShrink: 0,
@@ -102,24 +102,24 @@ function EventCard({ event, isAdmin, resyncing, onResync }: {
   return (
     <div
       style={{
-        backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: '10px',
+        backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4', borderRadius: '2px',
         padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px',
         transition: 'border-color 150ms',
       }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = '#D1D5DB')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = '#9A9A9A')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
         <Link
           href={`/events/${event.id}`}
-          style={{ fontSize: '14px', fontWeight: '700', color: '#0D0D0D', textDecoration: 'none', lineHeight: '1.35', flex: 1, minWidth: 0 }}
+          style={{ fontSize: '13px', fontWeight: '700', color: '#0A0A0A', textDecoration: 'none', lineHeight: '1.35', flex: 1, minWidth: 0 }}
         >
           {event.sf_identifier}
         </Link>
         <BriefBadge status={event.brief_status} />
       </div>
 
-      <div style={{ fontSize: '12px', color: '#6B7280' }}>
+      <div style={{ fontSize: '12px', color: '#9A9A9A' }}>
         {dateStr} · {event.location}
       </div>
 
@@ -131,14 +131,14 @@ function EventCard({ event, isAdmin, resyncing, onResync }: {
             disabled={resyncing || !hasUrls}
             title={!hasUrls ? 'No URLs configured' : 'Re-scrape URLs and regenerate brief'}
             style={{
-              padding: '4px 10px', border: '1px solid #E5E5E5', borderRadius: '6px',
-              backgroundColor: '#FFFFFF', color: '#374151', fontSize: '11px',
+              padding: '4px 10px', border: '1px solid #E4E4E4', borderRadius: '2px',
+              backgroundColor: '#FFFFFF', color: '#5F5F5F', fontSize: '11px',
               cursor: (resyncing || !hasUrls) ? 'not-allowed' : 'pointer',
               opacity: (resyncing || !hasUrls) ? 0.5 : 1,
               display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
             }}
             onMouseEnter={e => { if (!resyncing && hasUrls) e.currentTarget.style.borderColor = '#E7534F' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5E5E5' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E4E4E4' }}
           >
             {resyncing ? <><Spinner size={10} /> Syncing…</> : 'Resync Brief'}
           </button>
@@ -159,11 +159,11 @@ function EventSection({ title, events, isAdmin, resyncingIds, onResync }: {
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#0D0D0D', margin: '0 0 14px 0' }}>
+      <h2 style={{ fontSize: '13px', fontWeight: '700', color: '#0A0A0A', margin: '0 0 14px 0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         {title}
       </h2>
       {events.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>No {title.toLowerCase()} yet.</p>
+        <p style={{ fontSize: '13px', color: '#9A9A9A', margin: 0 }}>No {title.toLowerCase()} yet.</p>
       ) : (
         <div style={{
           display: 'grid',
@@ -211,12 +211,13 @@ function CreateEventModal({ onClose, onCreate }: {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 12px', border: '1px solid #E5E5E5',
-    borderRadius: '7px', fontSize: '13px', color: '#0D0D0D',
+    width: '100%', padding: '8px 12px', border: '1px solid #E4E4E4',
+    borderRadius: '2px', fontSize: '13px', color: '#0A0A0A',
     backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none',
   }
   const labelStyle: React.CSSProperties = {
-    fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '5px',
+    fontSize: '12px', fontWeight: '600', color: '#5F5F5F', display: 'block', marginBottom: '5px',
+    textTransform: 'uppercase', letterSpacing: '0.06em',
   }
   const fieldGap: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
 
@@ -230,9 +231,9 @@ function CreateEventModal({ onClose, onCreate }: {
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          backgroundColor: '#FFFFFF', borderRadius: '12px',
+          backgroundColor: '#FFFFFF', borderRadius: '4px',
           width: '100%', maxWidth: '480px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
+          border: '1px solid #E4E4E4',
           zIndex: 401, maxHeight: '92vh', overflowY: 'auto',
         }}
         onClick={e => e.stopPropagation()}
@@ -240,11 +241,11 @@ function CreateEventModal({ onClose, onCreate }: {
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 24px', borderBottom: '1px solid #E5E5E5',
+          padding: '20px 24px', borderBottom: '1px solid #E4E4E4',
           position: 'sticky', top: 0, backgroundColor: '#FFFFFF', zIndex: 1,
         }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>Create Event</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#9CA3AF', lineHeight: 1, padding: '4px' }}>
+          <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#0A0A0A', margin: 0, letterSpacing: '-0.01em' }}>Create Event</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#9A9A9A', lineHeight: 1, padding: '4px' }}>
             ×
           </button>
         </div>
@@ -259,10 +260,11 @@ function CreateEventModal({ onClose, onCreate }: {
                 <button
                   key={t} type="button" onClick={() => setEventType(t)}
                   style={{
-                    padding: '7px 20px', borderRadius: '7px', fontSize: '13px', fontWeight: '500',
-                    cursor: 'pointer', border: 'none',
-                    backgroundColor: eventType === t ? '#E7534F' : '#F3F4F6',
-                    color: eventType === t ? '#FFFFFF' : '#374151',
+                    padding: '6px 16px', borderRadius: '2px', fontSize: '13px', fontWeight: '500',
+                    cursor: 'pointer', border: '1px solid',
+                    borderColor: eventType === t ? '#E7534F' : '#E4E4E4',
+                    backgroundColor: eventType === t ? '#E7534F' : '#FFFFFF',
+                    color: eventType === t ? '#FFFFFF' : '#5F5F5F',
                   }}
                 >
                   {t}
@@ -278,7 +280,7 @@ function CreateEventModal({ onClose, onCreate }: {
               name="sf_identifier" required placeholder="e.g. PRT ServiceNow 30 Sep 26"
               style={inputStyle}
               onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
             />
           </div>
 
@@ -288,7 +290,7 @@ function CreateEventModal({ onClose, onCreate }: {
             <input
               name="date" type="date" required style={inputStyle}
               onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
             />
           </div>
 
@@ -299,7 +301,7 @@ function CreateEventModal({ onClose, onCreate }: {
               name="location" required placeholder="e.g. Sydney CBD"
               style={inputStyle}
               onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
             />
           </div>
 
@@ -318,7 +320,7 @@ function CreateEventModal({ onClose, onCreate }: {
                   name="url_main" type="url" placeholder="https://…"
                   style={inputStyle}
                   onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
                 />
               </div>
               {eventType === 'EDGE' && (
@@ -329,7 +331,7 @@ function CreateEventModal({ onClose, onCreate }: {
                       name="url_speakers" type="url" placeholder="https://…"
                       style={inputStyle}
                       onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
                     />
                   </div>
                   <div>
@@ -338,7 +340,7 @@ function CreateEventModal({ onClose, onCreate }: {
                       name="url_agenda" type="url" placeholder="https://…"
                       style={inputStyle}
                       onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
                     />
                   </div>
                 </>
@@ -352,10 +354,10 @@ function CreateEventModal({ onClose, onCreate }: {
             <button
               type="submit" disabled={submitting}
               style={{
-                flex: 1, padding: '9px 0', border: 'none', borderRadius: '8px',
+                flex: 1, padding: '8px 0', border: 'none', borderRadius: '2px',
                 backgroundColor: submitting ? '#F3F4F6' : '#E7534F',
-                color: submitting ? '#9CA3AF' : '#FFFFFF',
-                fontSize: '14px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer',
+                color: submitting ? '#9A9A9A' : '#FFFFFF',
+                fontSize: '13px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer',
               }}
             >
               {submitting ? 'Creating…' : 'Create Event'}
@@ -363,8 +365,8 @@ function CreateEventModal({ onClose, onCreate }: {
             <button
               type="button" onClick={onClose}
               style={{
-                padding: '9px 16px', border: '1px solid #E5E5E5', borderRadius: '8px',
-                backgroundColor: '#FFFFFF', color: '#374151', fontSize: '14px', cursor: 'pointer',
+                padding: '8px 14px', border: '1px solid #E4E4E4', borderRadius: '2px',
+                backgroundColor: '#FFFFFF', color: '#5F5F5F', fontSize: '13px', cursor: 'pointer',
               }}
             >
               Cancel
@@ -406,14 +408,14 @@ export default function EventsClient({ events: initialEvents, isAdmin }: {
     <>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F8F8F8' }}>
         <div style={{
-          backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E5E5',
+          backgroundColor: '#FFFFFF', borderBottom: '1px solid #E4E4E4',
           padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>Events Hub</h1>
-            <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0 0 0' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0A0A0A', margin: 0, letterSpacing: '-0.01em' }}>Events Hub</h1>
+            <p style={{ fontSize: '13px', color: '#9A9A9A', margin: '4px 0 0 0' }}>
               Manage ADAPT events and auto-assign reps to campaigns.
             </p>
           </div>
@@ -421,9 +423,9 @@ export default function EventsClient({ events: initialEvents, isAdmin }: {
             <button
               onClick={() => setShowCreate(true)}
               style={{
-                padding: '8px 18px', border: 'none', borderRadius: '8px',
+                padding: '7px 16px', border: 'none', borderRadius: '2px',
                 backgroundColor: '#E7534F', color: '#FFFFFF',
-                fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
               }}
             >
               + Create Event

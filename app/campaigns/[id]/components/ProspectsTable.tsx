@@ -24,8 +24,9 @@ function MatchBadge({ score }: { score: number }) {
   else if (score >= 60) { bg = '#FFFBEB'; color = '#D97706' }
   return (
     <span style={{
-      display: 'inline-block', padding: '4px 10px', borderRadius: '20px',
-      fontSize: '11px', fontWeight: '500', backgroundColor: bg, color,
+      display: 'inline-block', padding: '2px 8px', borderRadius: '2px',
+      fontSize: '11px', fontWeight: '600', backgroundColor: bg, color,
+      letterSpacing: '0.03em',
     }}>
       {score}%
     </span>
@@ -35,9 +36,10 @@ function MatchBadge({ score }: { score: number }) {
 function PillTag({ label }: { label: string }) {
   return (
     <span style={{
-      display: 'inline-block', padding: '2px 8px', borderRadius: '20px',
-      backgroundColor: '#F3F3F1', color: '#6B7280', fontSize: '11px',
+      display: 'inline-block', padding: '2px 7px', borderRadius: '2px',
+      backgroundColor: '#F8F8F8', color: '#9A9A9A', fontSize: '11px',
       fontWeight: '500', marginRight: '4px', marginBottom: '2px',
+      border: '1px solid #E4E4E4',
     }}>
       {label}
     </span>
@@ -64,9 +66,9 @@ export default function ProspectsTable({ prospects }: Props) {
   }, [prospects, searchQuery])
 
   const thStyle: React.CSSProperties = {
-    padding: '11px 16px', textAlign: 'left', fontSize: '11px',
-    fontWeight: '600', color: '#6B7280', textTransform: 'uppercase',
-    letterSpacing: '0.06em', whiteSpace: 'nowrap',
+    padding: '10px 16px', textAlign: 'left', fontSize: '11px',
+    fontWeight: '600', color: '#9A9A9A', textTransform: 'uppercase',
+    letterSpacing: '0.08em', whiteSpace: 'nowrap',
   }
 
   return (
@@ -78,19 +80,19 @@ export default function ProspectsTable({ prospects }: Props) {
         placeholder="Search prospects..."
         style={{
           display: 'block', width: '100%', marginBottom: '12px',
-          padding: '12px 14px', fontSize: '14px', color: '#0D0D0D',
-          backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5',
-          borderRadius: '6px', outline: 'none', boxSizing: 'border-box',
+          padding: '10px 14px', fontSize: '13px', color: '#0A0A0A',
+          backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4',
+          borderRadius: '2px', outline: 'none', boxSizing: 'border-box',
         }}
         onFocus={e => { e.currentTarget.style.borderColor = '#E7534F' }}
-        onBlur={e => { e.currentTarget.style.borderColor = '#E5E5E5' }}
+        onBlur={e => { e.currentTarget.style.borderColor = '#E4E4E4' }}
       />
 
       {filtered.length > 0 ? (
-        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: '10px', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #E5E5E5', backgroundColor: '#FAFAFA' }}>
+              <tr style={{ borderBottom: '1px solid #E4E4E4', backgroundColor: '#FAFAFA' }}>
                 <th style={thStyle}>Name</th>
                 <th style={thStyle}>Company</th>
                 <th style={thStyle}>Job Title</th>
@@ -105,25 +107,25 @@ export default function ProspectsTable({ prospects }: Props) {
                 return (
                   <tr
                     key={p.id}
-                    style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#F7F6F3' }}
+                    style={{ borderBottom: isLast ? 'none' : '1px solid #E4E4E4' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#F8F8F8' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
                   >
-                    <td style={{ padding: '13px 16px', fontSize: '14px', fontWeight: '600', color: '#0D0D0D', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '10px 16px', fontSize: '13px', fontWeight: '600', color: '#0A0A0A', whiteSpace: 'nowrap' }}>
                       {p.full_name ?? '—'}
                     </td>
-                    <td style={{ padding: '13px 16px', fontSize: '14px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F', whiteSpace: 'nowrap' }}>
                       {p.company ?? '—'}
                     </td>
-                    <td style={{ padding: '13px 16px', fontSize: '14px', color: '#6B7280' }}>
+                    <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F' }}>
                       {p.title ?? '—'}
                     </td>
-                    <td style={{ padding: '13px 16px' }}>
+                    <td style={{ padding: '10px 16px' }}>
                       <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                         {(p.history_tags ?? []).map(tag => <PillTag key={tag} label={tag} />)}
                       </div>
                     </td>
-                    <td style={{ padding: '13px 16px', textAlign: 'right' }}>
+                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                       <MatchBadge score={score} />
                     </td>
                   </tr>
@@ -133,8 +135,8 @@ export default function ProspectsTable({ prospects }: Props) {
           </table>
         </div>
       ) : (
-        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: '10px', padding: '40px 24px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#6B7280' }}>No results found.</p>
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4', padding: '40px 24px', textAlign: 'center' }}>
+          <p style={{ fontSize: '13px', color: '#9A9A9A' }}>No results found.</p>
         </div>
       )}
     </div>

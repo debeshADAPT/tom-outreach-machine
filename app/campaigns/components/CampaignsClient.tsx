@@ -97,7 +97,7 @@ function RepAvatars({ reps }: { reps: { userId: string; displayName: string }[] 
   const overflow = reps.length - 3
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '-4px' }}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
       {shown.map((rep, i) => {
         const initials = rep.displayName
           .split(' ')
@@ -128,7 +128,7 @@ function RepAvatars({ reps }: { reps: { userId: string; displayName: string }[] 
       {overflow > 0 && (
         <div style={{
           width: '24px', height: '24px', borderRadius: '50%',
-          backgroundColor: '#E5E5E5', color: '#6B7280',
+          backgroundColor: '#E4E4E4', color: '#5F5F5F',
           fontSize: '10px', fontWeight: '600',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           border: '1.5px solid #FFFFFF',
@@ -161,16 +161,16 @@ export default function CampaignsClient({ campaigns, isAdmin, accessError }: Pro
   const items = groupAndSort(filtered)
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3', padding: '32px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8F8F8', padding: '32px' }}>
       <RealtimeRefresher tables={['campaigns']} />
 
       {/* Access error banner */}
       {accessError === 'not_assigned' && !dismissedError && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          backgroundColor: '#FEF3C7', border: '1px solid #FCD34D',
-          borderRadius: '8px', padding: '12px 16px', marginBottom: '20px',
-          fontSize: '14px', color: '#92400E',
+          backgroundColor: '#FFFBEB', border: '1px solid #FCD34D',
+          borderRadius: '0', padding: '10px 16px', marginBottom: '20px',
+          fontSize: '13px', color: '#92400E',
         }}>
           <span>You don&apos;t have access to that campaign. Ask an admin to assign you.</span>
           <button
@@ -185,22 +185,21 @@ export default function CampaignsClient({ campaigns, isAdmin, accessError }: Pro
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0D0D0D', margin: 0, lineHeight: 1.2 }}>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0A0A0A', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
             Campaigns
           </h1>
-          <p style={{ marginTop: '4px', fontSize: '14px', color: '#6B7280' }}>
+          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9A9A9A' }}>
             {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
           </p>
         </div>
         {isAdmin && (
           <button
             onClick={() => setShowModal(true)}
-            className="transition-colors"
             style={{
-              padding: '10px 18px', backgroundColor: '#E7534F', color: '#FFFFFF',
-              border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+              padding: '8px 16px', backgroundColor: '#E7534F', color: '#FFFFFF',
+              border: 'none', borderRadius: '2px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94440')}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94642')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E7534F')}
           >
             + New Campaign
@@ -208,18 +207,19 @@ export default function CampaignsClient({ campaigns, isAdmin, accessError }: Pro
         )}
       </div>
 
-      {/* Filter pills */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+      {/* Filter tabs — underline style */}
+      <div style={{ display: 'flex', gap: '0', marginBottom: '24px', borderBottom: '1px solid #E4E4E4' }}>
         {FILTERS.map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             style={{
-              padding: '6px 16px', borderRadius: '20px', border: '1px solid',
-              borderColor: filter === f ? '#E7534F' : '#E5E5E5',
-              backgroundColor: filter === f ? '#E7534F' : '#FFFFFF',
-              color: filter === f ? '#FFFFFF' : '#6B7280',
-              fontSize: '13px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.1s',
+              padding: '8px 16px', border: 'none', borderBottom: filter === f ? '2px solid #E7534F' : '2px solid transparent',
+              backgroundColor: 'transparent',
+              color: filter === f ? '#E7534F' : '#9A9A9A',
+              fontSize: '13px', fontWeight: filter === f ? '600' : '500',
+              cursor: 'pointer', transition: 'all 0.1s',
+              marginBottom: '-1px',
             }}
           >
             {f}
@@ -242,14 +242,13 @@ function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFilte
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      padding: '80px 24px', backgroundColor: '#FFFFFF', borderRadius: '12px',
-      border: '1px solid #E5E5E5',
+      padding: '80px 24px', backgroundColor: '#FFFFFF',
+      border: '1px solid #E4E4E4',
     }}>
-      <div style={{ fontSize: '40px', marginBottom: '12px' }}>📋</div>
-      <p style={{ fontSize: '16px', fontWeight: '600', color: '#0D0D0D', marginBottom: '6px' }}>
+      <p style={{ fontSize: '15px', fontWeight: '600', color: '#0A0A0A', marginBottom: '6px' }}>
         {isFiltered ? 'No campaigns match this filter' : 'No campaigns yet'}
       </p>
-      <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+      <p style={{ fontSize: '13px', color: '#9A9A9A', marginBottom: '24px' }}>
         {isFiltered
           ? 'Try selecting a different filter above.'
           : isAdmin
@@ -260,10 +259,10 @@ function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFilte
         <button
           onClick={onNew}
           style={{
-            padding: '10px 20px', backgroundColor: '#E7534F', color: '#FFFFFF',
-            border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+            padding: '8px 16px', backgroundColor: '#E7534F', color: '#FFFFFF',
+            border: 'none', borderRadius: '2px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
           }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94440')}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94642')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E7534F')}
         >
           + New Campaign
@@ -276,11 +275,11 @@ function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFilte
 function ProgressCell({ sent, total }: { sent: number; total: number }) {
   const pct = total > 0 ? Math.round((sent / total) * 100) : 0
   return (
-    <td style={{ padding: '14px 16px', minWidth: '160px' }}>
-      <div style={{ height: '4px', backgroundColor: '#F3F3F1', borderRadius: '2px', marginBottom: '5px' }}>
-        <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#E7534F', borderRadius: '2px', transition: 'width 0.3s' }} />
+    <td style={{ padding: '10px 16px', minWidth: '160px' }}>
+      <div style={{ height: '3px', backgroundColor: '#E4E4E4', borderRadius: '0', marginBottom: '5px' }}>
+        <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#E7534F', transition: 'width 0.3s' }} />
       </div>
-      <span style={{ fontSize: '12px', color: '#6B7280' }}>{sent} / {total} sent</span>
+      <span style={{ fontSize: '12px', color: '#9A9A9A' }}>{sent} / {total} sent</span>
     </td>
   )
 }
@@ -291,14 +290,15 @@ function CampaignsTable({ items, expandedGroups, onToggleGroup }: {
   onToggleGroup: (eventId: string) => void
 }) {
   return (
-    <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E5E5', overflow: 'hidden' }}>
+    <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4', overflow: 'hidden' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #E5E5E5' }}>
+          <tr style={{ borderBottom: '1px solid #E4E4E4' }}>
             {['Campaign', 'Theme', 'Event Date', 'Contacts', 'Progress', 'Reps', 'Status'].map(col => (
               <th key={col} style={{
-                padding: '12px 16px', textAlign: 'left', fontSize: '11px',
-                fontWeight: '600', color: '#6B7280', letterSpacing: '0.06em', textTransform: 'uppercase',
+                padding: '10px 16px', textAlign: 'left', fontSize: '11px',
+                fontWeight: '600', color: '#9A9A9A', letterSpacing: '0.08em', textTransform: 'uppercase',
+                backgroundColor: '#FAFAFA',
               }}>
                 {col}
               </th>
@@ -352,42 +352,43 @@ function EventGroupRow({ group, expanded, onToggle, isLast }: {
   return (
     <tr
       onClick={onToggle}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F9F8F6')}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F8F8')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-      style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5', cursor: 'pointer' }}
+      style={{ borderBottom: isLast ? 'none' : '1px solid #E4E4E4', cursor: 'pointer' }}
     >
-      <td style={{ padding: '14px 16px' }}>
+      <td style={{ padding: '10px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <svg
-            viewBox="0 0 20 20" fill="currentColor" width="13" height="13"
-            style={{ flexShrink: 0, color: '#9CA3AF', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }}
+            viewBox="0 0 20 20" fill="currentColor" width="12" height="12"
+            style={{ flexShrink: 0, color: '#9A9A9A', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }}
           >
             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
-          <span style={{ fontWeight: '700', color: '#0D0D0D', fontSize: '14px' }}>
+          <span style={{ fontWeight: '700', color: '#0A0A0A', fontSize: '13px' }}>
             {group.name}
           </span>
           <span style={{
-            fontSize: '11px', fontWeight: '500', color: '#6B7280',
-            backgroundColor: '#F3F4F6', padding: '1px 7px', borderRadius: '10px',
+            fontSize: '11px', fontWeight: '500', color: '#9A9A9A',
+            backgroundColor: '#F8F8F8', padding: '1px 6px', borderRadius: '2px',
+            border: '1px solid #E4E4E4',
           }}>
             {repCount} {repCount === 1 ? 'rep' : 'reps'}
           </span>
         </div>
       </td>
-      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280' }}>—</td>
-      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#9A9A9A' }}>—</td>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F', whiteSpace: 'nowrap' }}>
         {formatDate(group.event_date)}
       </td>
-      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#0D0D0D', fontWeight: '500' }}>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#0A0A0A', fontWeight: '500' }}>
         {group.totalProspects}
       </td>
       <ProgressCell sent={group.sentProspects} total={group.totalProspects} />
-      <td style={{ padding: '14px 16px' }}>
+      <td style={{ padding: '10px 16px' }}>
         <RepAvatars reps={group.allReps} />
       </td>
-      <td style={{ padding: '14px 16px' }}>
-        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>
+      <td style={{ padding: '10px 16px' }}>
+        <span style={{ padding: '2px 8px', borderRadius: '2px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', backgroundColor: badge.bg, color: badge.color }}>
           {badge.label}
         </span>
       </td>
@@ -403,25 +404,25 @@ function RepCampaignRow({ campaign, isLast }: { campaign: CampaignWithStats; isL
   return (
     <tr
       onClick={() => router.push(`/campaigns/${campaign.id}`)}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F9F8F6')}
-      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-      style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5', cursor: 'pointer', backgroundColor: '#FAFAFA' }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F8F8')}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FAFAFA')}
+      style={{ borderBottom: isLast ? 'none' : '1px solid #E4E4E4', cursor: 'pointer', backgroundColor: '#FAFAFA' }}
     >
-      <td style={{ padding: '11px 16px 11px 38px' }}>
+      <td style={{ padding: '9px 16px 9px 38px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ color: '#D1D5DB', fontSize: '12px' }}>└</span>
-          <span style={{ fontSize: '13px', color: '#374151', fontWeight: '500' }}>{repName}</span>
+          <span style={{ color: '#E4E4E4', fontSize: '12px' }}>└</span>
+          <span style={{ fontSize: '13px', color: '#5F5F5F', fontWeight: '500' }}>{repName}</span>
         </div>
       </td>
-      <td style={{ padding: '11px 16px', fontSize: '13px', color: '#9CA3AF' }}>—</td>
-      <td style={{ padding: '11px 16px', fontSize: '13px', color: '#9CA3AF' }}>—</td>
-      <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0D0D0D', fontWeight: '500' }}>
+      <td style={{ padding: '9px 16px', fontSize: '13px', color: '#9A9A9A' }}>—</td>
+      <td style={{ padding: '9px 16px', fontSize: '13px', color: '#9A9A9A' }}>—</td>
+      <td style={{ padding: '9px 16px', fontSize: '13px', color: '#0A0A0A', fontWeight: '500' }}>
         {campaign.totalProspects}
       </td>
       <ProgressCell sent={campaign.sentProspects} total={campaign.totalProspects} />
-      <td style={{ padding: '11px 16px' }} />
-      <td style={{ padding: '11px 16px' }}>
-        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>
+      <td style={{ padding: '9px 16px' }} />
+      <td style={{ padding: '9px 16px' }}>
+        <span style={{ padding: '2px 8px', borderRadius: '2px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', backgroundColor: badge.bg, color: badge.color }}>
           {badge.label}
         </span>
       </td>
@@ -436,26 +437,26 @@ function CampaignRow({ campaign, isLast }: { campaign: CampaignWithStats; isLast
   return (
     <tr
       onClick={() => router.push(`/campaigns/${campaign.id}`)}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F9F8F6')}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F8F8')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-      style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5', cursor: 'pointer' }}
+      style={{ borderBottom: isLast ? 'none' : '1px solid #E4E4E4', cursor: 'pointer' }}
     >
-      <td style={{ padding: '14px 16px' }}>
-        <span style={{ fontWeight: '600', color: '#0D0D0D', fontSize: '14px' }}>{campaign.name}</span>
+      <td style={{ padding: '10px 16px' }}>
+        <span style={{ fontWeight: '600', color: '#0A0A0A', fontSize: '13px' }}>{campaign.name}</span>
       </td>
-      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280' }}>{campaign.theme ?? '—'}</td>
-      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F' }}>{campaign.theme ?? '—'}</td>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F', whiteSpace: 'nowrap' }}>
         {formatDate(campaign.event_date)}
       </td>
-      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#0D0D0D', fontWeight: '500' }}>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#0A0A0A', fontWeight: '500' }}>
         {campaign.totalProspects}
       </td>
       <ProgressCell sent={campaign.sentProspects} total={campaign.totalProspects} />
-      <td style={{ padding: '14px 16px' }}>
+      <td style={{ padding: '10px 16px' }}>
         <RepAvatars reps={campaign.assignedReps} />
       </td>
-      <td style={{ padding: '14px 16px' }}>
-        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>
+      <td style={{ padding: '10px 16px' }}>
+        <span style={{ padding: '2px 8px', borderRadius: '2px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', backgroundColor: badge.bg, color: badge.color }}>
           {badge.label}
         </span>
       </td>

@@ -18,7 +18,7 @@ export default function TabNav({ campaignId, activeTab }: Props) {
   return (
     <div style={{
       backgroundColor: '#FFFFFF',
-      borderBottom: '1px solid #E5E5E5',
+      borderBottom: '1px solid #E4E4E4',
       display: 'flex',
     }}>
       {TABS.map(tab => {
@@ -29,15 +29,16 @@ export default function TabNav({ campaignId, activeTab }: Props) {
             href={`/campaigns/${campaignId}?tab=${tab.id}`}
             style={{
               display: 'inline-block',
-              padding: '14px 16px',
-              fontSize: '14px',
+              padding: '10px 16px',
+              fontSize: '13px',
               fontWeight: isActive ? '600' : '500',
-              color: isActive ? '#E7534F' : '#6B7280',
+              color: isActive ? '#E7534F' : '#9A9A9A',
               textDecoration: 'none',
               borderBottom: isActive ? '2px solid #E7534F' : '2px solid transparent',
               marginBottom: '-1px',
               transition: 'color 0.15s',
               whiteSpace: 'nowrap',
+              letterSpacing: '0.01em',
             }}
           >
             {tab.label}

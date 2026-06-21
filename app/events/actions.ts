@@ -62,7 +62,7 @@ export interface EventChangelogEntry {
 async function fetchUrlContent(url: string): Promise<{ content: string; ok: boolean }> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TOM-Bot/1.0)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SIGNAL-Bot/1.0)' },
       signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) return { content: '', ok: false }

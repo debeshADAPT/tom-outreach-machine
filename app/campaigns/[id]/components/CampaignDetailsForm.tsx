@@ -10,15 +10,15 @@ interface Props {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '9px 12px', border: '1px solid #E5E5E5',
-  borderRadius: '8px', fontSize: '14px', color: '#0D0D0D',
+  width: '100%', padding: '9px 12px', border: '1px solid #E4E4E4',
+  borderRadius: '2px', fontSize: '13px', color: '#0A0A0A',
   backgroundColor: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
 }
 
 const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: '12px', fontWeight: '600',
-  color: '#6B7280', marginBottom: '6px', textTransform: 'uppercase',
-  letterSpacing: '0.05em',
+  color: '#5F5F5F', marginBottom: '6px', textTransform: 'uppercase',
+  letterSpacing: '0.06em',
 }
 
 export default function CampaignDetailsForm({ campaign, isAdmin }: Props) {
@@ -106,9 +106,9 @@ export default function CampaignDetailsForm({ campaign, isAdmin }: Props) {
             onClick={handleSave}
             disabled={saving || !name.trim()}
             style={{
-              padding: '9px 20px', border: 'none', borderRadius: '8px',
+              padding: '8px 18px', border: 'none', borderRadius: '2px',
               backgroundColor: saving || !name.trim() ? '#F3A09F' : '#E7534F',
-              color: '#FFFFFF', fontSize: '14px', fontWeight: '600',
+              color: '#FFFFFF', fontSize: '13px', fontWeight: '600',
               cursor: saving || !name.trim() ? 'not-allowed' : 'pointer',
             }}
           >

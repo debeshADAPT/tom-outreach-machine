@@ -56,15 +56,15 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
   const badge = campaignStatusBadge(c.status)
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8F8F8' }}>
       <RealtimeRefresher tables={['campaigns', 'prospects']} />
-      <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E5E5', padding: '24px 32px 0 32px' }}>
+      <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E4E4E4', padding: '24px 32px 0 32px' }}>
         <Link
           href="/campaigns"
-          className="hover:text-[#6B7280] transition-colors"
+          className="hover:text-[#5F5F5F] transition-colors"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '4px',
-            fontSize: '13px', color: '#9CA3AF', textDecoration: 'none',
+            fontSize: '13px', color: '#9A9A9A', textDecoration: 'none',
             marginBottom: '8px',
           }}
         >
@@ -72,12 +72,13 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0A0A0A', margin: 0, letterSpacing: '-0.01em' }}>
               {c.name}
             </h1>
             <span style={{
-              padding: '3px 10px', borderRadius: '20px', fontSize: '12px',
-              fontWeight: '500', backgroundColor: badge.bg, color: badge.color,
+              padding: '2px 8px', borderRadius: '2px', fontSize: '11px',
+              fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase',
+              backgroundColor: badge.bg, color: badge.color,
             }}>
               {badge.label}
             </span>
@@ -92,7 +93,7 @@ export default async function CampaignDetailPage({ params, searchParams }: Props
       <div style={{ padding: '28px 32px' }}>
         <Suspense fallback={
           <div className="relative min-h-64 flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full border-4 border-[#E5E5E5] border-t-[#E7534F] animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#E4E4E4] border-t-[#E7534F] animate-spin" />
           </div>
         }>
           <TabContent campaignId={id} tab={tab} campaign={c} isAdmin={isAdmin} currentUserId={user.id} />

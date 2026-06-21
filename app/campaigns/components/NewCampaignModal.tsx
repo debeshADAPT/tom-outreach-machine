@@ -10,21 +10,23 @@ interface Props {
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 12px',
-  border: '1px solid #E5E5E5',
-  borderRadius: '6px',
+  border: '1px solid #E4E4E4',
+  borderRadius: '2px',
   backgroundColor: '#FFFFFF',
-  color: '#0D0D0D',
-  fontSize: '14px',
+  color: '#0A0A0A',
+  fontSize: '13px',
   outline: 'none',
   boxSizing: 'border-box',
 }
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: '13px',
-  fontWeight: '500',
-  color: '#6B7280',
+  fontSize: '12px',
+  fontWeight: '600',
+  color: '#5F5F5F',
   marginBottom: '6px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
 }
 
 export default function NewCampaignModal({ onClose }: Props) {
@@ -61,19 +63,20 @@ export default function NewCampaignModal({ onClose }: Props) {
       style={{
         position: 'fixed', inset: 0, zIndex: 50,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.35)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
         width: '100%', maxWidth: '440px', backgroundColor: '#FFFFFF',
-        borderRadius: '12px', padding: '28px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+        borderRadius: '4px', padding: '28px',
+        border: '1px solid #E4E4E4',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>New Campaign</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#0A0A0A', margin: 0, letterSpacing: '-0.01em' }}>New Campaign</h2>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', fontSize: '22px', color: '#6B7280', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}
+            style={{ background: 'none', border: 'none', fontSize: '20px', color: '#9A9A9A', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}
           >
             ×
           </button>
@@ -111,9 +114,9 @@ export default function NewCampaignModal({ onClose }: Props) {
               type="button"
               onClick={onClose}
               style={{
-                flex: 1, padding: '10px', border: '1px solid #E5E5E5',
-                borderRadius: '8px', backgroundColor: '#FFFFFF', color: '#6B7280',
-                fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                flex: 1, padding: '9px', border: '1px solid #E4E4E4',
+                borderRadius: '2px', backgroundColor: '#FFFFFF', color: '#5F5F5F',
+                fontSize: '13px', fontWeight: '500', cursor: 'pointer',
               }}
             >
               Cancel
@@ -122,10 +125,10 @@ export default function NewCampaignModal({ onClose }: Props) {
               type="submit"
               disabled={submitting}
               style={{
-                flex: 1, padding: '10px', border: 'none',
-                borderRadius: '8px',
+                flex: 1, padding: '9px', border: 'none',
+                borderRadius: '2px',
                 backgroundColor: submitting ? '#F3A09F' : '#E7534F',
-                color: '#FFFFFF', fontSize: '14px', fontWeight: '600',
+                color: '#FFFFFF', fontSize: '13px', fontWeight: '600',
                 cursor: submitting ? 'not-allowed' : 'pointer',
               }}
             >

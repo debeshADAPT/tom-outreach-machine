@@ -143,22 +143,31 @@ function TopMatches() {
         {TOP_MATCHES.map((m, i) => (
           <div key={i} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 mt-0.5"
-              style={{ backgroundColor: m.bg }}
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#FFFFFF', fontSize: '11px', fontWeight: '700',
+                flexShrink: 0, marginTop: '2px', backgroundColor: m.bg,
+              }}
             >
               {m.initials}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[13px] font-semibold text-gray-900">{m.name}</span>
-                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${m.tier === 'High' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#0A0A0A' }}>{m.name}</span>
+                <span style={{
+                  fontSize: '10px', fontWeight: '600', flexShrink: 0,
+                  padding: '1px 5px', borderRadius: '2px', letterSpacing: '0.05em', textTransform: 'uppercase',
+                  backgroundColor: m.tier === 'High' ? '#DCFCE7' : '#FEF3C7',
+                  color: m.tier === 'High' ? '#166534' : '#92400E',
+                }}>
                   {m.tier}
                 </span>
               </div>
-              <div className="text-[11px] text-gray-500 truncate">{m.title} · {m.company}</div>
-              <div className="flex flex-wrap gap-1 mt-1">
+              <div style={{ fontSize: '11px', color: '#9A9A9A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title} · {m.company}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                 {m.signals.map(s => (
-                  <span key={s} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{s}</span>
+                  <span key={s} style={{ fontSize: '10px', backgroundColor: '#F8F8F8', color: '#5F5F5F', padding: '1px 5px', borderRadius: '2px', border: '1px solid #E4E4E4' }}>{s}</span>
                 ))}
               </div>
             </div>

@@ -40,8 +40,8 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 12px', border: '1px solid #E5E5E5',
-    borderRadius: '7px', fontSize: '13px', color: '#0D0D0D',
+    width: '100%', padding: '8px 12px', border: '1px solid #E4E4E4',
+    borderRadius: '2px', fontSize: '13px', color: '#0D0D0D',
     backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none',
   }
   const labelStyle: React.CSSProperties = {
@@ -58,15 +58,15 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          backgroundColor: '#FFFFFF', borderRadius: '12px',
+          backgroundColor: '#FFFFFF', borderRadius: '4px',
           width: '100%', maxWidth: '440px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.16)', zIndex: 401,
+          border: '1px solid #E4E4E4', zIndex: 401,
         }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 24px', borderBottom: '1px solid #E5E5E5',
+          padding: '20px 24px', borderBottom: '1px solid #E4E4E4',
         }}>
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>Invite User</h2>
@@ -105,7 +105,7 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
                 <button
                   key={r} type="button" onClick={() => setRole(r)}
                   style={{
-                    flex: 1, padding: '8px 0', borderRadius: '7px', fontSize: '13px', fontWeight: '500',
+                    flex: 1, padding: '8px 0', borderRadius: '2px', fontSize: '13px', fontWeight: '500',
                     cursor: 'pointer', border: 'none',
                     backgroundColor: role === r ? '#E7534F' : '#F3F4F6',
                     color: role === r ? '#FFFFFF' : '#374151',
@@ -124,7 +124,7 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
             <button
               type="submit" disabled={submitting}
               style={{
-                flex: 1, padding: '9px 0', border: 'none', borderRadius: '8px',
+                flex: 1, padding: '9px 0', border: 'none', borderRadius: '2px',
                 backgroundColor: submitting ? '#F3F4F6' : '#E7534F',
                 color: submitting ? '#9CA3AF' : '#FFFFFF',
                 fontSize: '14px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer',
@@ -135,7 +135,7 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
             <button
               type="button" onClick={onClose}
               style={{
-                padding: '9px 16px', border: '1px solid #E5E5E5', borderRadius: '8px',
+                padding: '9px 16px', border: '1px solid #E4E4E4', borderRadius: '2px',
                 backgroundColor: '#FFFFFF', color: '#374151', fontSize: '14px', cursor: 'pointer',
               }}
             >
@@ -180,9 +180,9 @@ function RevokeModal({ user, onClose, onRevoked }: {
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          backgroundColor: '#FFFFFF', borderRadius: '12px',
+          backgroundColor: '#FFFFFF', borderRadius: '4px',
           width: '100%', maxWidth: '400px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.16)', zIndex: 401,
+          border: '1px solid #E4E4E4', zIndex: 401,
           padding: '28px 28px 24px',
         }}
         onClick={e => e.stopPropagation()}
@@ -192,7 +192,7 @@ function RevokeModal({ user, onClose, onRevoked }: {
         </h2>
         <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 20px', lineHeight: '1.5' }}>
           <strong style={{ color: '#0D0D0D' }}>{user.display_name ?? user.email}</strong> will be
-          immediately signed out and permanently removed from TOM. This cannot be undone.
+          immediately signed out and permanently removed from SIGNAL. This cannot be undone.
         </p>
 
         {error && <p style={{ fontSize: '12px', color: '#DC2626', margin: '0 0 12px' }}>{error}</p>}
@@ -201,7 +201,7 @@ function RevokeModal({ user, onClose, onRevoked }: {
           <button
             onClick={handleRevoke} disabled={loading}
             style={{
-              flex: 1, padding: '9px 0', border: 'none', borderRadius: '8px',
+              flex: 1, padding: '9px 0', border: 'none', borderRadius: '2px',
               backgroundColor: loading ? '#F3F4F6' : '#DC2626',
               color: loading ? '#9CA3AF' : '#FFFFFF',
               fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer',
@@ -212,7 +212,7 @@ function RevokeModal({ user, onClose, onRevoked }: {
           <button
             onClick={onClose}
             style={{
-              padding: '9px 16px', border: '1px solid #E5E5E5', borderRadius: '8px',
+              padding: '9px 16px', border: '1px solid #E4E4E4', borderRadius: '2px',
               backgroundColor: '#FFFFFF', color: '#374151', fontSize: '14px', cursor: 'pointer',
             }}
           >
@@ -241,22 +241,22 @@ export default function UsersClient({ users: initialUsers, currentUserId }: {
 
   return (
     <>
-      <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F8F8F8' }}>
         {/* Header */}
         <div style={{
-          backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E5E5',
+          backgroundColor: '#FFFFFF', borderBottom: '1px solid #E4E4E4',
           padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
             <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>Users</h1>
             <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0 0' }}>
-              Manage who has access to TOM and their roles.
+              Manage who has access to SIGNAL and their roles.
             </p>
           </div>
           <button
             onClick={() => setShowInvite(true)}
             style={{
-              padding: '8px 18px', border: 'none', borderRadius: '8px',
+              padding: '8px 18px', border: 'none', borderRadius: '2px',
               backgroundColor: '#E7534F', color: '#FFFFFF',
               fontSize: '14px', fontWeight: '600', cursor: 'pointer',
             }}
@@ -302,10 +302,10 @@ function UserSection({ title, users, currentUserId, onRevoke }: {
       {users.length === 0 ? (
         <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>No {title.toLowerCase()} yet.</p>
       ) : (
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E5E5', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '4px', border: '1px solid #E4E4E4', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #E5E5E5' }}>
+              <tr style={{ borderBottom: '1px solid #E4E4E4' }}>
                 {['User', 'Email', 'Role', 'Joined', 'Status', ''].map((col, i) => (
                   <th key={i} style={{
                     padding: '11px 16px', textAlign: 'left', fontSize: '11px',
@@ -385,7 +385,7 @@ function UserRow({ user, isLast, isSelf, onRevoke }: {
   }
 
   return (
-    <tr style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5' }}>
+    <tr style={{ borderBottom: isLast ? 'none' : '1px solid #E4E4E4' }}>
       {/* User */}
       <td style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -413,7 +413,7 @@ function UserRow({ user, isLast, isSelf, onRevoke }: {
                   style={{
                     fontSize: '13px', fontWeight: '600', padding: '4px 8px',
                     border: saveError ? '1px solid #DC2626' : '1px solid #E7534F',
-                    borderRadius: '5px', outline: 'none', width: '160px',
+                    borderRadius: '2px', outline: 'none', width: '160px',
                     color: '#0D0D0D', backgroundColor: saving ? '#F9FAFB' : '#FFFFFF',
                   }}
                 />
@@ -421,7 +421,7 @@ function UserRow({ user, isLast, isSelf, onRevoke }: {
                   onClick={handleSave}
                   disabled={saving || !draft.trim()}
                   style={{
-                    padding: '4px 10px', border: 'none', borderRadius: '5px',
+                    padding: '4px 10px', border: 'none', borderRadius: '2px',
                     backgroundColor: saving || !draft.trim() ? '#F3F4F6' : '#E7534F',
                     color: saving || !draft.trim() ? '#9CA3AF' : '#FFFFFF',
                     fontSize: '12px', fontWeight: '600',
@@ -434,7 +434,7 @@ function UserRow({ user, isLast, isSelf, onRevoke }: {
                   onClick={cancelEdit}
                   disabled={saving}
                   style={{
-                    padding: '4px 8px', border: '1px solid #E5E5E5', borderRadius: '5px',
+                    padding: '4px 8px', border: '1px solid #E4E4E4', borderRadius: '2px',
                     backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '12px',
                     cursor: saving ? 'not-allowed' : 'pointer',
                   }}
@@ -524,7 +524,7 @@ function UserRow({ user, isLast, isSelf, onRevoke }: {
           <button
             onClick={onRevoke}
             style={{
-              padding: '4px 12px', border: '1px solid #E5E5E5', borderRadius: '6px',
+              padding: '4px 12px', border: '1px solid #E4E4E4', borderRadius: '2px',
               backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '12px',
               cursor: 'pointer', fontWeight: '500',
             }}

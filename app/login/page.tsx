@@ -9,25 +9,28 @@ export default function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center"
-      style={{ backgroundColor: '#F7F6F3' }}
+      style={{ backgroundColor: '#0A0A0A' }}
     >
       <div className="w-full max-w-sm px-4">
         <div className="flex flex-col items-center mb-10">
-          <div className="flex items-center gap-2">
-            <span style={{ color: '#0D0D0D' }} className="font-bold text-4xl tracking-tight">TOM</span>
-            <span
-              style={{ backgroundColor: '#E7534F' }}
-              className="w-2.5 h-2.5 rounded-full"
-            />
-          </div>
-          <p className="mt-2 text-sm" style={{ color: '#6B7280' }}>
-            The Outreach Machine
+          <span
+            style={{
+              color: '#FFFFFF',
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontWeight: 700, fontSize: '28px', letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+            }}
+          >
+            SIGNAL
+          </span>
+          <p className="mt-2 text-xs tracking-widest uppercase" style={{ color: '#5F5F5F', letterSpacing: '0.12em' }}>
+            by ADAPT
           </p>
         </div>
 
         <form action={action} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-xs font-medium" style={{ color: '#6B7280' }}>
+            <label htmlFor="email" className="text-xs font-medium uppercase tracking-wide" style={{ color: '#5F5F5F', letterSpacing: '0.08em' }}>
               Email
             </label>
             <input
@@ -36,18 +39,19 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="w-full rounded-md px-3 py-2.5 text-sm outline-none transition-colors focus:ring-1"
+              className="w-full px-3 py-2.5 text-sm outline-none transition-colors focus:ring-1"
               style={{
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E5E5E5',
-                color: '#0D0D0D',
+                backgroundColor: '#141414',
+                border: '1px solid #2A2A2A',
+                borderRadius: '2px',
+                color: '#FFFFFF',
                 '--tw-ring-color': '#E7534F',
               } as React.CSSProperties}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-xs font-medium" style={{ color: '#6B7280' }}>
+            <label htmlFor="password" className="text-xs font-medium uppercase tracking-wide" style={{ color: '#5F5F5F', letterSpacing: '0.08em' }}>
               Password
             </label>
             <input
@@ -56,11 +60,12 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-md px-3 py-2.5 text-sm outline-none transition-colors focus:ring-1"
+              className="w-full px-3 py-2.5 text-sm outline-none transition-colors focus:ring-1"
               style={{
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E5E5E5',
-                color: '#0D0D0D',
+                backgroundColor: '#141414',
+                border: '1px solid #2A2A2A',
+                borderRadius: '2px',
+                color: '#FFFFFF',
                 '--tw-ring-color': '#E7534F',
               } as React.CSSProperties}
             />
@@ -75,8 +80,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="mt-2 w-full rounded-md py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
-            style={{ backgroundColor: '#E7534F' }}
+            className="mt-2 w-full py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
+            style={{ backgroundColor: '#E7534F', borderRadius: '2px' }}
           >
             {pending ? 'Signing in…' : 'Sign In'}
           </button>

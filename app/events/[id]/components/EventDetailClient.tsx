@@ -49,13 +49,13 @@ function Field({ label, value }: { label: string; value: string | null | undefin
 }
 
 const card: React.CSSProperties = {
-  backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: '10px',
+  backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4', borderRadius: '2px',
   padding: '20px 24px', marginBottom: '16px',
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #E5E5E5',
-  borderRadius: '7px', fontSize: '13px', color: '#0D0D0D',
+  width: '100%', padding: '8px 12px', border: '1px solid #E4E4E4',
+  borderRadius: '2px', fontSize: '13px', color: '#0D0D0D',
   backgroundColor: '#FFFFFF', boxSizing: 'border-box', outline: 'none',
 }
 
@@ -78,7 +78,7 @@ function BriefDisplay({ brief }: { brief: EventBrief }) {
             {brief.key_themes.map((t, i) => (
               <span key={i} style={{
                 fontSize: '12px', color: '#374151', backgroundColor: '#F3F4F6',
-                padding: '3px 10px', borderRadius: '12px',
+                padding: '3px 10px', borderRadius: '4px',
               }}>
                 {t}
               </span>
@@ -108,7 +108,7 @@ function BriefDisplay({ brief }: { brief: EventBrief }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
             {brief.speakers.map((s, i) => (
               <div key={i} style={{
-                border: '1px solid #E5E5E5', borderRadius: '8px', padding: '12px 14px',
+                border: '1px solid #E4E4E4', borderRadius: '2px', padding: '12px 14px',
                 display: 'flex', flexDirection: 'column', gap: '4px',
               }}>
                 {s.photo_url && (
@@ -197,7 +197,7 @@ function AssignRepsModal({ event, onClose, onChanged, onRepRemoved }: {
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          backgroundColor: '#FFFFFF', borderRadius: '12px',
+          backgroundColor: '#FFFFFF', borderRadius: '4px',
           width: '100%', maxWidth: '440px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
           zIndex: 401, overflow: 'hidden',
@@ -206,7 +206,7 @@ function AssignRepsModal({ event, onClose, onChanged, onRepRemoved }: {
       >
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 24px', borderBottom: '1px solid #E5E5E5',
+          padding: '20px 24px', borderBottom: '1px solid #E4E4E4',
         }}>
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>Assign Reps</h2>
@@ -275,11 +275,11 @@ function AssignRepsModal({ event, onClose, onChanged, onRepRemoved }: {
           )}
         </div>
 
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #E5E5E5', textAlign: 'right' }}>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #E4E4E4', textAlign: 'right' }}>
           <button
             onClick={onClose}
             style={{
-              padding: '8px 20px', border: 'none', borderRadius: '7px',
+              padding: '8px 20px', border: 'none', borderRadius: '2px',
               backgroundColor: '#0D0D0D', color: '#FFFFFF',
               fontSize: '14px', fontWeight: '600', cursor: 'pointer',
             }}
@@ -315,7 +315,7 @@ function ChangelogRow({ entry }: { entry: EventChangelogEntry }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <span style={{
           fontSize: '11px', fontWeight: '600', color: meta.color,
-          backgroundColor: meta.bg, padding: '2px 8px', borderRadius: '10px', whiteSpace: 'nowrap',
+          backgroundColor: meta.bg, padding: '2px 8px', borderRadius: '2px', whiteSpace: 'nowrap',
         }}>
           {meta.label}
         </span>
@@ -334,7 +334,7 @@ function ChangelogRow({ entry }: { entry: EventChangelogEntry }) {
       {expanded && hasPrevBrief && (
         <pre style={{
           marginTop: '10px', padding: '12px', backgroundColor: '#F9F9F8',
-          borderRadius: '6px', fontSize: '11px', color: '#374151',
+          borderRadius: '2px', fontSize: '11px', color: '#374151',
           overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
         }}>
           {JSON.stringify(entry.detail!.previous_brief, null, 2)}
@@ -407,10 +407,10 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
     <>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F8F8F8' }}>
         {/* Header */}
         <div style={{
-          backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E5E5',
+          backgroundColor: '#FFFFFF', borderBottom: '1px solid #E4E4E4',
           padding: '16px 32px', display: 'flex', alignItems: 'center', gap: '14px',
         }}>
           <Link href="/events" style={{ fontSize: '13px', color: '#9CA3AF', textDecoration: 'none' }}>
@@ -422,7 +422,7 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
           </h1>
           <span style={{
             fontSize: '11px', fontWeight: '600', color: '#6B7280',
-            backgroundColor: '#F3F4F6', padding: '3px 10px', borderRadius: '10px',
+            backgroundColor: '#F3F4F6', padding: '3px 10px', borderRadius: '2px',
           }}>
             {initialEvent.event_type}
           </span>
@@ -515,7 +515,7 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
                   <button
                     onClick={handleSave} disabled={saving}
                     style={{
-                      padding: '7px 18px', border: 'none', borderRadius: '7px',
+                      padding: '7px 18px', border: 'none', borderRadius: '2px',
                       backgroundColor: saving ? '#F3F4F6' : '#0D0D0D',
                       color: saving ? '#9CA3AF' : '#FFFFFF',
                       fontSize: '13px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer',
@@ -528,7 +528,7 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
                     disabled={resyncing || !(urlMain || urlSpeakers || urlAgenda || initialEvent.url_main)}
                     title="Re-scrape all URLs and regenerate brief"
                     style={{
-                      padding: '7px 18px', border: '1px solid #E5E5E5', borderRadius: '7px',
+                      padding: '7px 18px', border: '1px solid #E4E4E4', borderRadius: '2px',
                       backgroundColor: '#FFFFFF', color: '#374151',
                       fontSize: '13px', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: '6px',
@@ -581,7 +581,7 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
                   <button
                     onClick={handleResync} disabled={resyncing}
                     style={{
-                      padding: '7px 16px', border: 'none', borderRadius: '7px',
+                      padding: '7px 16px', border: 'none', borderRadius: '2px',
                       backgroundColor: '#E7534F', color: '#FFFFFF',
                       fontSize: '13px', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: '6px',
@@ -615,7 +615,7 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
                 <button
                   onClick={() => setShowRepsModal(true)}
                   style={{
-                    padding: '5px 14px', border: '1px solid #E5E5E5', borderRadius: '6px',
+                    padding: '5px 14px', border: '1px solid #E4E4E4', borderRadius: '2px',
                     backgroundColor: '#FFFFFF', color: '#374151', fontSize: '12px',
                     cursor: 'pointer', fontWeight: '500',
                   }}

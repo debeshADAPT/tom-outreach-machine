@@ -14,7 +14,7 @@ import {
   type ProspectContext,
   type ProspectIntelligence,
 } from './actions'
-import { getEvents, type Event as TomEvent } from '../events/actions'
+import { getEvents, type Event as SignalEvent } from '../events/actions'
 
 // ─── CSV helpers ─────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ function StatusBadge({ status }: { status: AiContextProspect['intelligence_statu
     return (
       <span style={{
         fontSize: '11px', color: '#9CA3AF', backgroundColor: '#F3F4F6',
-        padding: '2px 7px', borderRadius: '10px', whiteSpace: 'nowrap',
+        padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap',
       }}>
         No research
       </span>
@@ -121,7 +121,7 @@ function ConfidenceBadge({ score }: { score: number }) {
   return (
     <span style={{
       fontSize: '11px', fontWeight: '600', color, backgroundColor: bg,
-      padding: '2px 8px', borderRadius: '10px', whiteSpace: 'nowrap',
+      padding: '2px 8px', borderRadius: '2px', whiteSpace: 'nowrap',
     }}>
       {label}
     </span>
@@ -191,8 +191,8 @@ function ColumnMappingUI({
               value={mapping[key]}
               onChange={e => onMappingChange(key, e.target.value)}
               style={{
-                flex: 1, padding: '5px 8px', border: '1px solid #E5E5E5',
-                borderRadius: '6px', fontSize: '12px', color: '#374151',
+                flex: 1, padding: '5px 8px', border: '1px solid #E4E4E4',
+                borderRadius: '2px', fontSize: '12px', color: '#374151',
                 backgroundColor: '#FFFFFF', cursor: 'pointer',
               }}
             >
@@ -213,7 +213,7 @@ function ColumnMappingUI({
         <button
           onClick={onConfirm}
           style={{
-            flex: 1, padding: '7px 0', border: 'none', borderRadius: '7px',
+            flex: 1, padding: '7px 0', border: 'none', borderRadius: '2px',
             backgroundColor: '#E7534F', color: '#FFFFFF', fontSize: '13px',
             fontWeight: '500', cursor: 'pointer',
           }}
@@ -223,7 +223,7 @@ function ColumnMappingUI({
         <button
           onClick={onCancel}
           style={{
-            padding: '7px 12px', border: '1px solid #E5E5E5', borderRadius: '7px',
+            padding: '7px 12px', border: '1px solid #E4E4E4', borderRadius: '2px',
             backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '13px', cursor: 'pointer',
           }}
         >
@@ -240,7 +240,7 @@ type UploadStage = 'idle' | 'mapping' | 'uploading' | 'done'
 
 export default function AiContextPage() {
   const [prospects, setProspects] = useState<AiContextProspect[]>([])
-  const [events, setEvents] = useState<TomEvent[]>([])
+  const [events, setEvents] = useState<SignalEvent[]>([])
   const [loading, setLoading] = useState(true)
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -459,12 +459,12 @@ export default function AiContextPage() {
   // ── Common styles ─────────────────────────────────────────────────────────
 
   const card: React.CSSProperties = {
-    backgroundColor: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: '10px',
+    backgroundColor: '#FFFFFF', border: '1px solid #E4E4E4', borderRadius: '2px',
   }
 
   const btn = (variant: 'primary' | 'ghost' | 'danger', disabled?: boolean): React.CSSProperties => ({
     padding: '7px 14px', border: variant === 'ghost' ? '1px solid #E5E5E5' : 'none',
-    borderRadius: '7px', fontSize: '13px', fontWeight: '500', cursor: disabled ? 'not-allowed' : 'pointer',
+    borderRadius: '2px', fontSize: '13px', fontWeight: '500', cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
     backgroundColor: variant === 'primary' ? '#E7534F' : variant === 'danger' ? '#FEE2E2' : '#FFFFFF',
     color: variant === 'primary' ? '#FFFFFF' : variant === 'danger' ? '#DC2626' : '#374151',
@@ -476,7 +476,7 @@ export default function AiContextPage() {
     <>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F8F8F8' }}>
         {/* Page header */}
         <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E5E5E5', padding: '20px 32px' }}>
           <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#0D0D0D', margin: 0 }}>
@@ -528,7 +528,7 @@ export default function AiContextPage() {
                   <button
                     onClick={() => fileRef.current?.click()}
                     style={{
-                      padding: '7px 14px', border: '1px solid #E5E5E5', borderRadius: '7px',
+                      padding: '7px 14px', border: '1px solid #E4E4E4', borderRadius: '2px',
                       backgroundColor: '#FFFFFF', color: '#0D0D0D', fontSize: '13px',
                       fontWeight: '500', cursor: 'pointer',
                     }}
@@ -573,8 +573,8 @@ export default function AiContextPage() {
                     value={bulkEventId}
                     onChange={e => setBulkEventId(e.target.value)}
                     style={{
-                      flex: 1, padding: '7px 10px', border: '1px solid #E5E5E5',
-                      borderRadius: '7px', fontSize: '13px', color: '#374151',
+                      flex: 1, padding: '7px 10px', border: '1px solid #E4E4E4',
+                      borderRadius: '2px', fontSize: '13px', color: '#374151',
                       backgroundColor: '#FFFFFF', cursor: 'pointer',
                     }}
                   >
@@ -615,7 +615,7 @@ export default function AiContextPage() {
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
                     padding: '10px 16px', borderBottom: '1px solid #E5E5E5',
-                    backgroundColor: '#F9F9F8',
+                    backgroundColor: '#F8F8F8',
                   }}>
                     <input
                       type="checkbox"
@@ -667,7 +667,7 @@ export default function AiContextPage() {
                             disabled={isResearching}
                             title="Run prospect research"
                             style={{
-                              padding: '4px 10px', border: '1px solid #E5E5E5', borderRadius: '6px',
+                              padding: '4px 10px', border: '1px solid #E4E4E4', borderRadius: '2px',
                               backgroundColor: '#FFFFFF', color: '#374151', fontSize: '12px',
                               cursor: isResearching ? 'not-allowed' : 'pointer',
                               opacity: isResearching ? 0.5 : 1, flexShrink: 0,
@@ -808,8 +808,8 @@ export default function AiContextPage() {
                       value={rightEventId}
                       onChange={e => setRightEventId(e.target.value)}
                       style={{
-                        flex: 1, padding: '8px 12px', border: '1px solid #E5E5E5',
-                        borderRadius: '8px', fontSize: '13px', color: '#374151',
+                        flex: 1, padding: '8px 12px', border: '1px solid #E4E4E4',
+                        borderRadius: '2px', fontSize: '13px', color: '#374151',
                         backgroundColor: '#FFFFFF', cursor: 'pointer',
                       }}
                     >
@@ -850,11 +850,11 @@ export default function AiContextPage() {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {contextHistory.map(ctx => (
-                        <div key={ctx.id} style={{ border: '1px solid #E5E5E5', borderRadius: '8px', padding: '14px 16px' }}>
+                        <div key={ctx.id} style={{ border: '1px solid #E4E4E4', borderRadius: '2px', padding: '14px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
                             <span style={{
                               fontSize: '11px', fontWeight: '600', color: '#E7534F',
-                              backgroundColor: '#FFF1F0', padding: '2px 8px', borderRadius: '10px',
+                              backgroundColor: '#FFF1F0', padding: '2px 8px', borderRadius: '2px',
                             }}>
                               {ctx.event_name}
                             </span>
