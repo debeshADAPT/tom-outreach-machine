@@ -89,6 +89,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
     user_id: c.user_id,
     name: c.name,
     theme: c.theme,
+    event_id: (c as unknown as { event_id?: string | null }).event_id ?? null,
     event_date: c.event_date,
     location: c.location,
     event_brief: c.event_brief,

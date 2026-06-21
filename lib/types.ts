@@ -3,6 +3,7 @@ export interface Campaign {
   user_id: string
   name: string
   theme: string | null
+  event_id: string | null
   event_date: string | null
   location: string | null
   event_brief: string | null

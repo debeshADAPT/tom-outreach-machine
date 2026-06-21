@@ -194,6 +194,155 @@ Realtime on `prospect_contexts` also still needs enabling (Table Editor → pros
 
 ---
 
+## Session: 2026-06-20 — Events Hub (code complete, not yet deployed)
+
+### What changed
+
+New top-level feature: Events Hub introduces `events` as the parent entity for all campaigns. Admins create events (EDGE or Roundtable), scrape content briefs from URLs via Claude, and assign reps — each assignment auto-creates a campaign linked to that rep and event. AI Context Creator now uses event briefs instead of campaign text.
+
+**Database** (`supabase/migrations/008_events_hub.sql` — **run manually in Supabase**):
+- `events` table: id, sf_identifier (UNIQUE), event_type, date, location, url_main/speakers/agenda, brief (jsonb), brief_status, brief_updated_at, created_by, created_at
+- `event_changelog` table: id, event_id (FK cascade), changed_by, changed_at, change_type, detail (jsonb)
+- `campaigns.event_id` — nullable FK to events (existing orphaned campaigns unaffected)
+- `campaign_assignments.event_id` — nullable FK to events (tracks event-level assignment origin)
+- `prospect_contexts.event_id` — nullable FK to events (additive; existing campaign_id stays)
+- RLS: events SELECT = authenticated; INSERT/UPDATE/DELETE = is_admin()
+
+**Server actions** (`app/events/actions.ts` — new file, `'use server'`):
+- `createEvent(formData)` — inserts event, sets brief_status='pending' if URLs provided, fires-and-forgets `runScrape()`, logs 'created'
+- `scrapeEventBrief(eventId)` / `resyncEventBrief(eventId)` — both call internal `runScrape()`: sets pending, archives previous brief to changelog, fetches URLs (graceful on failure), calls Claude `claude-sonnet-4-6` (no web search), writes structured JSON brief
+- `updateEvent(eventId, data)` — admin-only field update
+- `assignRepToEvent(eventId, userId)` — creates campaign (name=sf_identifier), inserts campaign_assignment, logs 'rep_assigned'; rolls back campaign on assignment failure
+- `unassignRepFromEvent(eventId, userId)` — deletes assignment, orphans campaign (does not delete it), logs 'rep_unassigned'
+- `getEvents()` — all events ordered by date asc, with assignedReps joined
+- `getEventById(eventId)` — full event + changelog + assignedReps
+
+**Pages** (new):
+- `app/events/page.tsx` — server component; isAdmin pattern; renders `EventsClient`
+- `app/events/components/EventsClient.tsx` — client component; two sections (EDGE / Roundtable); event cards; CreateEventModal; Resync Brief buttons
+- `app/events/[id]/page.tsx` — server component; isAdmin pattern; 404 on missing event; renders `EventDetailClient`
+- `app/events/[id]/components/EventDetailClient.tsx` — client component; Event Info (admin editable / staff read-only); Brief display (all states including polling when pending); Assigned Reps modal (inline, same checkbox pattern as AssignRepsModal); Changelog with expandable previous-brief
+
+**AI Context Creator** (`app/ai-context/actions.ts`, `app/ai-context/page.tsx`):
+- `generateContext(prospectId, eventId)` — signature changed from campaignId; loads event brief; new Phase 2 prompt uses both prospect intelligence and event brief; inserts to `prospect_contexts` with `event_id` (not `campaign_id`)
+- `bulkGenerateContext(prospectIds, eventId)` — same signature change
+- `ProspectContext` type: added `event_id: string | null`
+- Page: swapped campaign picker for event picker (shows `sf_identifier`); imports `getEvents` from `../events/actions`
+
+**Sidebar** (`components/Sidebar.tsx`):
+- New `IconCalendar` inline SVG
+- "Events Hub" nav item inserted **above** My Campaigns (first item in nav)
+- `isEventsActive = pathname.startsWith('/events')` active state
+
+### Files touched
+```
+new:      supabase/migrations/008_events_hub.sql
+new:      app/events/actions.ts
+new:      app/events/page.tsx
+new:      app/events/components/EventsClient.tsx
+new:      app/events/[id]/page.tsx
+new:      app/events/[id]/components/EventDetailClient.tsx
+modified: app/ai-context/actions.ts
+modified: app/ai-context/page.tsx
+modified: components/Sidebar.tsx
+```
+
+### Security constraints (permanent)
+- Claude API key in `ANTHROPIC_API_KEY` env var — server-side only
+- `brief_status` always set to `'pending'` before scrape and `'complete'`/`'failed'` after
+- Admin-only mutations enforced via `requireAdmin()` in all event write actions
+- Do not modify `RealtimeRefresher`
+
+### Current status
+
+Code complete. **008 migration must be run before Events Hub works.**
+
+**Mandatory manual step:**
+Run `supabase/migrations/008_events_hub.sql` in Supabase Dashboard → SQL Editor.
+
+---
+
+## Session: 2026-06-21 — Events Hub brief scraper improvement
+
+### What changed
+
+Improved HTML content extraction in `runScrape()` so the brief scraper captures structured data from ADAPT event pages rather than dumping raw HTML at Claude.
+
+**`app/events/actions.ts`** — three new pure helper functions inserted between `fetchUrlContent` and `buildBriefPrompt`:
+
+- `decodeEntities(str)` — decodes `&amp;`, `&lt;`, `&nbsp;`, `&#nnn;` etc. so speaker names arrive clean
+- `stripTags(html)` — strips all HTML tags and decodes entities, collapses whitespace
+- `extractStructuredContent(html)` — three-pass extraction returning `{ meta, headings, body }`:
+  - **Meta tags**: scans every `<meta>` for `property="og:*"` and `name="description"`, handles any attribute ordering
+  - **Headings**: `<h1>`–`<h3>` with backreference to ensure matching close tag; strips inner tags
+  - **Body**: `<p>` tags (deduplicated via Set, filtered at 15 chars minimum) plus any element whose `class` contains `speaker`, `agenda`, `session`, `topic`, or `bio`
+
+`buildBriefPrompt` now calls `extractStructuredContent` per URL and formats the result as three labelled blocks:
+```
+--- Meta Tags ---
+--- Page Headings ---
+--- Page Content ---
+```
+
+Per-URL character limit increased from 8,000 to 12,000 (applied to the extracted body text, not raw HTML).
+
+### Files touched
+```
+modified: app/events/actions.ts
+```
+
+---
+
+## Session: 2026-06-21 — Sidebar profile, Events Hub bug fixes, User Management, Edit display name
+
+### What changed
+
+**Sidebar user profile indicator** (`components/Sidebar.tsx`):
+- Fetches `display_name` + `role` from `public.profiles` using the Supabase browser client
+- Two-phase auth pattern: auth subscription clears profile on sign-out; pathname-triggered `tryFetch()` re-fetches on every navigation (catches post-login redirect, resolves "..." shown after login)
+- Expanded: avatar circle (red=admin, grey=staff) + display_name + role badge. Collapsed: avatar with tooltip.
+- Sign-out switched to client-side `supabase.auth.signOut()` + `router.push('/login')` (fixes wrong-user bug after account switch)
+- Admin-only "Users" nav item added (`IconUsers` SVG, links to `/users`)
+
+**Events Hub bug fixes**:
+- **Rep names not showing**: PostgREST cannot traverse `campaign_assignments.user_id → auth.users → public.profiles`. Fixed with two-step query in both `getEvents()` and `getEventById()`: fetch assignments → collect unique user_ids → query profiles → build map.
+- **Admin duplicate campaigns**: `Campaign` type had no `event_id`. Added field, threaded through `campaigns/page.tsx`, implemented `groupAndSort()` in `CampaignsClient` grouping campaigns by event_id with expand/collapse rows.
+- **Ghost rep rows after unassign (EventDetailClient)**: `useState + useEffect([initialEvent.assignedReps])` was resetting local state after every `router.refresh()` (new array reference = effect fires = old data restored). Replaced with an **exclusion set** (`removedRepIds`): rendered list is always `initialEvent.assignedReps.filter(r => !removedRepIds.has(r.user_id))`. Server refresh can never undo an optimistic removal.
+- **Ghost rep rows in Campaigns expanded groups**: orphaned campaigns (rep unassigned but campaign kept) still had `event_id` set, so they appeared as blank sub-rows. Fixed: filter `c.assignedReps.length > 0` before rendering `RepCampaignRow`. Also fixed `repCount` badge to use `group.allReps.length` (unique assigned reps) not `group.campaigns.length` (which counted orphans).
+
+**User Management page** (admin-only, `/users`):
+- `lib/supabase-admin.ts` — service-role client (bypasses RLS), server-side only
+- `app/users/actions.ts` — `getUsers()` (joins profiles + auth.admin.listUsers for email + confirmed status), `inviteUser()` (inviteUserByEmail + profile upsert), `revokeUser()` (self-revoke guard + deleteUser), `updateDisplayName()` (admin-gated, updates profiles via admin client)
+- `app/users/page.tsx` — server component; redirects non-admins to /campaigns
+- `app/users/components/UsersClient.tsx` — Admins + Staff sections; `InviteModal` (name/email/role); `RevokeModal` (confirmation, self-revoke blocked); `UserRow` with inline display name editing
+
+**Edit display name** (`app/users/components/UsersClient.tsx`):
+- Pencil icon appears on hover next to display name (turns brand red on hover)
+- Click → input pre-filled with current name; `Enter` saves, `Escape` cancels
+- Avatar initials preview draft value while editing
+- No-op guard: if name unchanged, cancel instead of hitting server
+- Save: calls `updateDisplayName()` server action; on success shows "✓ Saved" for 1.5 s then `router.refresh()`; on error shows inline red message below input
+
+### Files touched
+```
+new:      lib/supabase-admin.ts
+new:      app/users/actions.ts
+new:      app/users/page.tsx
+new:      app/users/components/UsersClient.tsx
+modified: components/Sidebar.tsx
+modified: lib/types.ts
+modified: app/campaigns/page.tsx
+modified: app/campaigns/components/CampaignsClient.tsx
+modified: app/events/actions.ts
+modified: app/events/[id]/components/EventDetailClient.tsx
+```
+
+### Current status
+
+All code committed and pushed. Deploying to Vercel. No new migrations required.
+
+---
+
 ## Unresolved Issues
 - **Email sending not implemented** — email logs and sent counts are mock data. Graph API (Outlook) integration not started.
 - **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
@@ -202,8 +351,12 @@ Realtime on `prospect_contexts` also still needs enabling (Table Editor → pros
 - **`lib/supabase.js`** — legacy unused client, safe to delete.
 - **`startProspectSequence` / `bulkStartSequences` / `saveSequenceDelays`** — actions exist, no UI trigger.
 - **AI Context Creator — no deduplication on insert** — uploading the same CSV twice creates duplicate prospect rows. No unique constraint on (assigned_to, full_name, company).
+- **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()` after returning. Reliable on Fluid Compute; may not complete on a cold-start termination. Resync Brief from the detail page is synchronous and always reliable.
+- **Events Hub — regex-based HTML extraction** — `extractStructuredContent` uses regex, not a DOM parser. Nested tags of the same type will close early. Good enough for event pages; replace with `node-html-parser` if extraction quality degrades.
+- **EventDetailClient — two pre-existing TS2322 errors** at lines 325 and 334 (`Type 'unknown' is not assignable to type 'ReactNode'`). Not introduced by recent changes; not blocking build.
+- **User Management — no role edit** — display name is editable inline but role (admin/staff) can only be changed via direct SQL. Could add a role toggle to `UserRow` if needed.
 
 ---
 
 ## Next Recommended Task
-**Microsoft Graph API email sending.** The sequence UI is complete; the gap is dispatching emails and capturing replies. Add `sendEmail(prospectId, stepKey)` in `app/campaigns/[id]/actions.ts` — calls Graph API, updates `prospects.status` and `prospects.sent_at`. Replies can be polled or webhoooked into a `/api/graph/webhook` route that sets `status = 'replied'`.
+**Microsoft Graph API email sending.** The sequence UI is complete; the gap is dispatching emails and capturing replies. Add `sendEmail(prospectId, stepKey)` in `app/campaigns/[id]/actions.ts` — calls Graph API, updates `prospects.status` and `prospects.sent_at`. Replies can be polled or webhooked into a `/api/graph/webhook` route that sets `status = 'replied'`.

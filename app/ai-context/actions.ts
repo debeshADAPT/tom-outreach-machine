@@ -23,6 +23,7 @@ export interface ProspectContext {
   id: string
   prospect_id: string
   campaign_id: string | null
+  event_id: string | null
   generated_by: string
   context_lines: string
   event_name: string
@@ -141,7 +142,7 @@ confidence_score must be an integer 1–5: 5 = uniquely identified with high cer
 
 export async function generateContext(
   prospectId: string,
-  campaignId: string
+  eventId: string
 ): Promise<{ ok: boolean; context?: ProspectContext; error?: string }> {
   const userId = await requireAuth()
   const supabase = await createSupabaseServer()
@@ -158,24 +159,28 @@ export async function generateContext(
     return { ok: false, error: 'Run prospect research first' }
   }
 
-  // Load campaign
-  const { data: campaign, error: cError } = await supabase
-    .from('campaigns')
-    .select('id, name, theme')
-    .eq('id', campaignId)
+  // Load event brief
+  const { data: event, error: eError } = await supabase
+    .from('events')
+    .select('id, sf_identifier, brief')
+    .eq('id', eventId)
     .single()
 
-  if (cError || !campaign) return { ok: false, error: 'Campaign not found' }
+  if (eError || !event) return { ok: false, error: 'Event not found' }
+  if (!event.brief) return { ok: false, error: 'Event has no brief — sync the brief first' }
 
   try {
     const userMessage = `You are helping a delegate acquisition rep personalise their outreach.
-Using only the intelligence provided, write 1-2 sentences explaining specifically why ${prospect.full_name ?? 'this person'} (${prospect.title ?? 'executive'} at ${prospect.company ?? 'their company'}) should attend ${campaign.name}${campaign.theme ? ` (${campaign.theme})` : ''}.
 
-Be specific — reference actual details from their background.
-No generic statements. No preamble. Just the 1-2 sentences.
+Using only the intelligence provided about this prospect, and the event brief below, write 1-2 sentences explaining specifically why ${prospect.full_name ?? 'this person'} (${prospect.title ?? 'executive'} at ${prospect.company ?? 'their company'}) should attend ${event.sf_identifier}.
 
-Intelligence:
-${JSON.stringify(prospect.intelligence, null, 2)}`
+Be specific — reference actual details from both their background AND the event content. No generic statements. No preamble. Just the 1-2 sentences.
+
+Prospect Intelligence:
+${JSON.stringify(prospect.intelligence, null, 2)}
+
+Event Brief:
+${JSON.stringify(event.brief, null, 2)}`
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -191,11 +196,12 @@ ${JSON.stringify(prospect.intelligence, null, 2)}`
     const { data: inserted, error: insertError } = await supabase
       .from('prospect_contexts')
       .insert({
-        prospect_id: prospectId,
-        campaign_id: campaignId,
-        generated_by: userId,
+        prospect_id:   prospectId,
+        event_id:      eventId,
+        campaign_id:   null,
+        generated_by:  userId,
         context_lines: contextLines,
-        event_name: campaign.name,
+        event_name:    event.sf_identifier,
       })
       .select()
       .single()
@@ -230,14 +236,14 @@ export async function bulkRunIntelligence(
 
 export async function bulkGenerateContext(
   prospectIds: string[],
-  campaignId: string
+  eventId: string
 ): Promise<{ total: number; succeeded: number; failed: number }> {
   await requireAuth()
   let succeeded = 0
   let failed = 0
 
   for (const id of prospectIds) {
-    const result = await generateContext(id, campaignId)
+    const result = await generateContext(id, eventId)
     if (result.ok) succeeded++
     else failed++
   }

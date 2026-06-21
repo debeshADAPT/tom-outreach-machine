@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   getAiContextProspects,
-  getLiveCampaigns,
   runProspectIntelligence,
   generateContext,
   bulkRunIntelligence,
@@ -15,6 +14,7 @@ import {
   type ProspectContext,
   type ProspectIntelligence,
 } from './actions'
+import { getEvents, type Event as TomEvent } from '../events/actions'
 
 // ─── CSV helpers ─────────────────────────────────────────────────────────────
 
@@ -236,12 +236,11 @@ function ColumnMappingUI({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type Campaign = { id: string; name: string; theme: string | null; status: string }
 type UploadStage = 'idle' | 'mapping' | 'uploading' | 'done'
 
 export default function AiContextPage() {
   const [prospects, setProspects] = useState<AiContextProspect[]>([])
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [events, setEvents] = useState<TomEvent[]>([])
   const [loading, setLoading] = useState(true)
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -255,8 +254,8 @@ export default function AiContextPage() {
   const [bulkGenerating, setBulkGenerating] = useState(false)
   const [deletingContextIds, setDeletingContextIds] = useState<Set<string>>(new Set())
 
-  const [bulkCampaignId, setBulkCampaignId] = useState('')
-  const [rightCampaignId, setRightCampaignId] = useState('')
+  const [bulkEventId, setBulkEventId] = useState('')
+  const [rightEventId, setRightEventId] = useState('')
 
   // Upload state
   const [uploadStage, setUploadStage] = useState<UploadStage>('idle')
@@ -281,9 +280,9 @@ export default function AiContextPage() {
 
   useEffect(() => {
     async function init() {
-      const [p, c] = await Promise.all([getAiContextProspects(), getLiveCampaigns()])
+      const [p, e] = await Promise.all([getAiContextProspects(), getEvents()])
       setProspects(p)
-      setCampaigns(c)
+      setEvents(e)
       setLoading(false)
     }
     init()
@@ -401,10 +400,10 @@ export default function AiContextPage() {
   // ── Context generation (Phase 2) ──────────────────────────────────────────
 
   async function handleGenerateContext() {
-    if (!activeId || !rightCampaignId) return
+    if (!activeId || !rightEventId) return
     setGeneratingContext(true)
     setContextError(null)
-    const result = await generateContext(activeId, rightCampaignId)
+    const result = await generateContext(activeId, rightEventId)
     setGeneratingContext(false)
     if (!result.ok) {
       setContextError(result.error ?? 'Generation failed')
@@ -414,9 +413,9 @@ export default function AiContextPage() {
   }
 
   async function handleBulkGenerateContext() {
-    if (selectedIds.size === 0 || !bulkCampaignId) return
+    if (selectedIds.size === 0 || !bulkEventId) return
     setBulkGenerating(true)
-    await bulkGenerateContext([...selectedIds], bulkCampaignId)
+    await bulkGenerateContext([...selectedIds], bulkEventId)
     setBulkGenerating(false)
     if (activeId && selectedIds.has(activeId)) {
       const h = await getProspectContextHistory(activeId)
@@ -454,8 +453,8 @@ export default function AiContextPage() {
   const activeProspect = prospects.find(p => p.id === activeId) ?? null
   const intel = activeProspect?.intelligence as ProspectIntelligence | null
   const canGenerateContext =
-    activeProspect?.intelligence_status === 'complete' && !!rightCampaignId && !generatingContext
-  const canBulkGenerate = selectedIds.size > 0 && !!bulkCampaignId && !bulkGenerating
+    activeProspect?.intelligence_status === 'complete' && !!rightEventId && !generatingContext
+  const canBulkGenerate = selectedIds.size > 0 && !!bulkEventId && !bulkGenerating
 
   // ── Common styles ─────────────────────────────────────────────────────────
 
@@ -571,17 +570,17 @@ export default function AiContextPage() {
                 </button>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <select
-                    value={bulkCampaignId}
-                    onChange={e => setBulkCampaignId(e.target.value)}
+                    value={bulkEventId}
+                    onChange={e => setBulkEventId(e.target.value)}
                     style={{
                       flex: 1, padding: '7px 10px', border: '1px solid #E5E5E5',
                       borderRadius: '7px', fontSize: '13px', color: '#374151',
                       backgroundColor: '#FFFFFF', cursor: 'pointer',
                     }}
                   >
-                    <option value="">Pick a campaign…</option>
-                    {campaigns.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                    <option value="">Pick an event…</option>
+                    {events.map(e => (
+                      <option key={e.id} value={e.id}>{e.sf_identifier}</option>
                     ))}
                   </select>
                   <button
@@ -806,8 +805,8 @@ export default function AiContextPage() {
 
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px' }}>
                     <select
-                      value={rightCampaignId}
-                      onChange={e => setRightCampaignId(e.target.value)}
+                      value={rightEventId}
+                      onChange={e => setRightEventId(e.target.value)}
                       style={{
                         flex: 1, padding: '8px 12px', border: '1px solid #E5E5E5',
                         borderRadius: '8px', fontSize: '13px', color: '#374151',
@@ -815,8 +814,8 @@ export default function AiContextPage() {
                       }}
                     >
                       <option value="">Select an event…</option>
-                      {campaigns.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
+                      {events.map(e => (
+                        <option key={e.id} value={e.id}>{e.sf_identifier}</option>
                       ))}
                     </select>
                     <button
@@ -825,7 +824,7 @@ export default function AiContextPage() {
                       style={btn('primary', !canGenerateContext)}
                       title={
                         activeProspect.intelligence_status !== 'complete' ? 'Run research first'
-                          : !rightCampaignId ? 'Select a campaign' : undefined
+                          : !rightEventId ? 'Select an event' : undefined
                       }
                     >
                       {generatingContext ? (

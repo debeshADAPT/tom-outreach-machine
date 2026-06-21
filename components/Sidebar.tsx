@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
-import { signOut } from '@/app/actions/auth'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +64,14 @@ function IconChevronLeft() {
   )
 }
 
+function IconCalendar() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" style={{ flexShrink: 0 }}>
+      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
 function IconZap() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17" style={{ flexShrink: 0 }}>
@@ -89,7 +96,21 @@ function IconSignOut() {
   )
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getInitials(name: string | null | undefined): string {
+  if (!name) return '?'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0][0].toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface UserProfile {
+  display_name: string | null
+  role: string | null
+}
 
 interface RecentCampaign {
   id: string
@@ -107,21 +128,72 @@ const DISABLED_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [campaignsOpen, setCampaignsOpen] = useState(false)
   const [recentCampaigns, setRecentCampaigns] = useState<RecentCampaign[]>([])
   const [flyoutVisible, setFlyoutVisible] = useState(false)
   const [flyoutTop, setFlyoutTop] = useState(0)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const campaignsIconRef = useRef<HTMLDivElement>(null)
 
   const isCampaignsActive = pathname.startsWith('/campaigns')
+  const isEventsActive = pathname.startsWith('/events')
   const isAiContextActive = pathname.startsWith('/ai-context')
   const isEdgeActive = pathname.startsWith('/edge')
+  const isUsersActive = pathname.startsWith('/users')
+  const isAdmin = profile?.role === 'admin'
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed')
     if (saved === 'true') setCollapsed(true)
   }, [])
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowser()
+
+    async function fetchProfile(userId: string) {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, role')
+          .eq('id', userId)
+          .single()
+        if (data) setProfile(data as UserProfile)
+      } catch {
+        // non-critical
+      }
+    }
+
+    // Fetch immediately for the current session
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) fetchProfile(user.id)
+    })
+
+    // Clear profile on sign-out; SIGNED_IN is handled by the pathname effect below
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session?.user) setProfile(null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Retry profile fetch on every navigation — catches post-login redirects where
+  // onAuthStateChange fires before the session cookie is readable on mount
+  useEffect(() => {
+    const supabase = createSupabaseBrowser()
+    async function tryFetch() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('profiles')
+        .select('display_name, role')
+        .eq('id', user.id)
+        .single()
+      if (data) setProfile(data as UserProfile)
+    }
+    tryFetch().catch(() => {})
+  }, [pathname])
 
   useEffect(() => {
     async function fetchCampaigns() {
@@ -142,6 +214,12 @@ export default function Sidebar() {
   }, [pathname])
 
   if (pathname === '/login') return null
+
+  async function handleSignOut() {
+    const supabase = createSupabaseBrowser()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   function toggleCollapse() {
     const next = !collapsed
@@ -190,6 +268,33 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-0.5 px-2 mt-1 flex-1">
+
+        {/* Events Hub */}
+        <Link
+          href="/events"
+          style={{
+            display: 'flex', alignItems: 'center',
+            gap: collapsed ? 0 : '10px',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            padding: collapsed ? '8px' : '8px 10px',
+            borderRadius: '6px',
+            color: isEventsActive ? '#FFFFFF' : '#6B7280',
+            backgroundColor: isEventsActive ? '#E7534F' : 'transparent',
+            textDecoration: 'none', fontSize: '14px', fontWeight: '500',
+            overflow: 'hidden',
+          }}
+          className={!isEventsActive ? 'hover:bg-[#F3F3F1] hover:text-[#0D0D0D] transition-colors' : ''}
+          title="Events Hub"
+        >
+          <span style={{ color: isEventsActive ? '#FFFFFF' : '#6B7280', flexShrink: 0 }}>
+            <IconCalendar />
+          </span>
+          {!collapsed && (
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Events Hub
+            </span>
+          )}
+        </Link>
 
         {/* My Campaigns */}
         {collapsed ? (
@@ -378,6 +483,35 @@ export default function Sidebar() {
           )}
         </Link>
 
+        {/* Users — admin only */}
+        {isAdmin && (
+          <Link
+            href="/users"
+            style={{
+              display: 'flex', alignItems: 'center',
+              gap: collapsed ? 0 : '10px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              padding: collapsed ? '8px' : '8px 10px',
+              borderRadius: '6px',
+              color: isUsersActive ? '#FFFFFF' : '#6B7280',
+              backgroundColor: isUsersActive ? '#E7534F' : 'transparent',
+              textDecoration: 'none', fontSize: '14px', fontWeight: '500',
+              overflow: 'hidden',
+            }}
+            className={!isUsersActive ? 'hover:bg-[#F3F3F1] hover:text-[#0D0D0D] transition-colors' : ''}
+            title="Users"
+          >
+            <span style={{ color: isUsersActive ? '#FFFFFF' : '#6B7280', flexShrink: 0 }}>
+              <IconUsers />
+            </span>
+            {!collapsed && (
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                Users
+              </span>
+            )}
+          </Link>
+        )}
+
         {/* Disabled items */}
         {DISABLED_ITEMS.map(item => (
           <div
@@ -406,30 +540,88 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer: Sign Out + Collapse toggle */}
+      {/* Footer: Profile + Sign Out + Collapse toggle */}
       <div className="px-2 pb-5" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        {/* Sign Out */}
-        <form action={signOut} style={{ width: '100%' }}>
-          <button
-            type="submit"
-            title="Sign out"
+
+        {/* Profile indicator */}
+        {collapsed ? (
+          // Collapsed: avatar circle only with tooltip
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 2px' }}>
+            <div
+              title={profile ? `${profile.display_name ?? 'Unknown'} · ${profile.role === 'admin' ? 'Admin' : 'Staff'}` : 'Loading…'}
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                backgroundColor: profile?.role === 'admin' ? '#E7534F' : '#9CA3AF',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#FFFFFF', fontSize: '12px', fontWeight: '600',
+                flexShrink: 0, cursor: 'default', userSelect: 'none',
+              }}
+            >
+              {getInitials(profile?.display_name)}
+            </div>
+          </div>
+        ) : (
+          // Expanded: avatar + name + role badge
+          <div
             style={{
-              width: '100%', display: 'flex', alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              gap: collapsed ? 0 : '10px',
-              padding: collapsed ? '8px' : '8px 10px',
-              border: 'none', borderRadius: '6px',
-              backgroundColor: 'transparent', color: '#6B7280',
-              cursor: 'pointer', fontSize: '14px', fontWeight: '500',
-              overflow: 'hidden', whiteSpace: 'nowrap',
-              transition: 'background-color 0.15s, color 0.15s',
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '8px 10px', borderRadius: '6px',
+              borderTop: '1px solid #F3F3F1',
+              marginBottom: '2px',
             }}
-            className="hover:bg-[#F3F3F1] hover:text-[#0D0D0D]"
           >
-            <IconSignOut />
-            {!collapsed && <span>Sign Out</span>}
-          </button>
-        </form>
+            <div
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                backgroundColor: profile?.role === 'admin' ? '#E7534F' : '#9CA3AF',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#FFFFFF', fontSize: '12px', fontWeight: '600',
+                flexShrink: 0, userSelect: 'none',
+              }}
+            >
+              {getInitials(profile?.display_name)}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{
+                fontSize: '13px', fontWeight: '600', color: '#0D0D0D',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {profile?.display_name ?? '…'}
+              </div>
+              <div style={{ marginTop: '2px' }}>
+                <span style={{
+                  fontSize: '10px', fontWeight: '600', letterSpacing: '0.05em',
+                  padding: '1px 6px', borderRadius: '4px',
+                  backgroundColor: profile?.role === 'admin' ? '#FEE9E8' : '#F3F4F6',
+                  color: profile?.role === 'admin' ? '#E7534F' : '#6B7280',
+                }}>
+                  {profile?.role === 'admin' ? 'Admin' : 'Staff'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sign Out */}
+        <button
+          onClick={handleSignOut}
+          title="Sign out"
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: collapsed ? 0 : '10px',
+            padding: collapsed ? '8px' : '8px 10px',
+            border: 'none', borderRadius: '6px',
+            backgroundColor: 'transparent', color: '#6B7280',
+            cursor: 'pointer', fontSize: '14px', fontWeight: '500',
+            overflow: 'hidden', whiteSpace: 'nowrap',
+            transition: 'background-color 0.15s, color 0.15s',
+          }}
+          className="hover:bg-[#F3F3F1] hover:text-[#0D0D0D]"
+        >
+          <IconSignOut />
+          {!collapsed && <span>Sign Out</span>}
+        </button>
 
         {/* Collapse toggle */}
         <button

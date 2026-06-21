@@ -16,16 +16,79 @@ interface Props {
   accessError?: string
 }
 
-function sortCampaigns(list: CampaignWithStats[]): CampaignWithStats[] {
-  return [...list].sort((a, b) => {
-    const aComp = a.status === 'completed' ? 1 : 0
-    const bComp = b.status === 'completed' ? 1 : 0
-    if (aComp !== bComp) return aComp - bComp
-    if (!a.event_date && !b.event_date) return 0
-    if (!a.event_date) return 1
-    if (!b.event_date) return -1
-    return new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+// ─── Grouping ─────────────────────────────────────────────────────────────────
+
+interface EventGroup {
+  event_id: string
+  name: string
+  event_date: string | null
+  campaigns: CampaignWithStats[]
+  totalProspects: number
+  sentProspects: number
+  allReps: { userId: string; displayName: string }[]
+}
+
+type TableItem =
+  | { type: 'group'; group: EventGroup }
+  | { type: 'campaign'; campaign: CampaignWithStats }
+
+function groupAndSort(campaigns: CampaignWithStats[]): TableItem[] {
+  const groupMap = new Map<string, EventGroup>()
+  const orphans: CampaignWithStats[] = []
+
+  for (const c of campaigns) {
+    if (c.event_id) {
+      if (!groupMap.has(c.event_id)) {
+        groupMap.set(c.event_id, {
+          event_id: c.event_id,
+          name: c.name,
+          event_date: c.event_date,
+          campaigns: [],
+          totalProspects: 0,
+          sentProspects: 0,
+          allReps: [],
+        })
+      }
+      const g = groupMap.get(c.event_id)!
+      g.campaigns.push(c)
+      g.totalProspects += c.totalProspects
+      g.sentProspects += c.sentProspects
+      for (const rep of c.assignedReps) {
+        if (!g.allReps.find(r => r.userId === rep.userId)) g.allReps.push(rep)
+      }
+    } else {
+      orphans.push(c)
+    }
+  }
+
+  const items: TableItem[] = [
+    ...Array.from(groupMap.values()).map(g => ({ type: 'group' as const, group: g })),
+    ...orphans.map(c => ({ type: 'campaign' as const, campaign: c })),
+  ]
+
+  return items.sort((a, b) => {
+    const aAllCompleted = a.type === 'group'
+      ? a.group.campaigns.every(c => c.status === 'completed')
+      : a.campaign.status === 'completed'
+    const bAllCompleted = b.type === 'group'
+      ? b.group.campaigns.every(c => c.status === 'completed')
+      : b.campaign.status === 'completed'
+    if (aAllCompleted !== bAllCompleted) return aAllCompleted ? 1 : -1
+
+    const aDate = a.type === 'group' ? a.group.event_date : a.campaign.event_date
+    const bDate = b.type === 'group' ? b.group.event_date : b.campaign.event_date
+    if (!aDate && !bDate) return 0
+    if (!aDate) return 1
+    if (!bDate) return -1
+    return new Date(aDate).getTime() - new Date(bDate).getTime()
   })
+}
+
+function groupStatus(group: EventGroup): CampaignWithStats['status'] {
+  const statuses = group.campaigns.map(c => c.status)
+  if (statuses.every(s => s === 'completed')) return 'completed'
+  if (statuses.some(s => s === 'active')) return 'active'
+  return 'draft'
 }
 
 function RepAvatars({ reps }: { reps: { userId: string; displayName: string }[] }) {
@@ -82,9 +145,20 @@ export default function CampaignsClient({ campaigns, isAdmin, accessError }: Pro
   const [filter, setFilter] = useState<Filter>('All')
   const [showModal, setShowModal] = useState(false)
   const [dismissedError, setDismissedError] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
-  const filtered = campaigns.filter(c => filter === 'All' || c.status === filter.toLowerCase())
-  const sorted = sortCampaigns(filtered)
+  function toggleGroup(eventId: string) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      next.has(eventId) ? next.delete(eventId) : next.add(eventId)
+      return next
+    })
+  }
+
+  const filtered = campaigns.filter(c =>
+    filter === 'All' || c.status === filter.toLowerCase()
+  )
+  const items = groupAndSort(filtered)
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F7F6F3', padding: '32px' }}>
@@ -153,10 +227,10 @@ export default function CampaignsClient({ campaigns, isAdmin, accessError }: Pro
         ))}
       </div>
 
-      {sorted.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState onNew={() => setShowModal(true)} isFiltered={filter !== 'All'} isAdmin={isAdmin} />
       ) : (
-        <CampaignsTable campaigns={sorted} />
+        <CampaignsTable items={items} expandedGroups={expandedGroups} onToggleGroup={toggleGroup} />
       )}
 
       {showModal && <NewCampaignModal onClose={() => setShowModal(false)} />}
@@ -199,20 +273,32 @@ function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFilte
   )
 }
 
-function CampaignsTable({ campaigns }: { campaigns: CampaignWithStats[] }) {
+function ProgressCell({ sent, total }: { sent: number; total: number }) {
+  const pct = total > 0 ? Math.round((sent / total) * 100) : 0
   return (
-    <div style={{
-      backgroundColor: '#FFFFFF', borderRadius: '12px',
-      border: '1px solid #E5E5E5', overflow: 'hidden',
-    }}>
+    <td style={{ padding: '14px 16px', minWidth: '160px' }}>
+      <div style={{ height: '4px', backgroundColor: '#F3F3F1', borderRadius: '2px', marginBottom: '5px' }}>
+        <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#E7534F', borderRadius: '2px', transition: 'width 0.3s' }} />
+      </div>
+      <span style={{ fontSize: '12px', color: '#6B7280' }}>{sent} / {total} sent</span>
+    </td>
+  )
+}
+
+function CampaignsTable({ items, expandedGroups, onToggleGroup }: {
+  items: TableItem[]
+  expandedGroups: Set<string>
+  onToggleGroup: (eventId: string) => void
+}) {
+  return (
+    <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E5E5', overflow: 'hidden' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid #E5E5E5' }}>
             {['Campaign', 'Theme', 'Event Date', 'Contacts', 'Progress', 'Reps', 'Status'].map(col => (
               <th key={col} style={{
                 padding: '12px 16px', textAlign: 'left', fontSize: '11px',
-                fontWeight: '600', color: '#6B7280', letterSpacing: '0.06em',
-                textTransform: 'uppercase',
+                fontWeight: '600', color: '#6B7280', letterSpacing: '0.06em', textTransform: 'uppercase',
               }}>
                 {col}
               </th>
@@ -220,21 +306,132 @@ function CampaignsTable({ campaigns }: { campaigns: CampaignWithStats[] }) {
           </tr>
         </thead>
         <tbody>
-          {campaigns.map((c, i) => (
-            <CampaignRow key={c.id} campaign={c} isLast={i === campaigns.length - 1} />
-          ))}
+          {items.map((item, i) => {
+            const isLast = i === items.length - 1
+            if (item.type === 'group') {
+              const expanded = expandedGroups.has(item.group.event_id)
+              return (
+                <>
+                  <EventGroupRow
+                    key={item.group.event_id}
+                    group={item.group}
+                    expanded={expanded}
+                    onToggle={() => onToggleGroup(item.group.event_id)}
+                    isLast={isLast && !expanded}
+                  />
+                  {expanded && (() => {
+                    const activeCampaigns = item.group.campaigns.filter(c => c.assignedReps.length > 0)
+                    return activeCampaigns.map((c, ci) => (
+                      <RepCampaignRow
+                        key={c.id}
+                        campaign={c}
+                        isLast={ci === activeCampaigns.length - 1 && isLast}
+                      />
+                    ))
+                  })()}
+                </>
+              )
+            }
+            return <CampaignRow key={item.campaign.id} campaign={item.campaign} isLast={isLast} />
+          })}
         </tbody>
       </table>
     </div>
   )
 }
 
+function EventGroupRow({ group, expanded, onToggle, isLast }: {
+  group: EventGroup
+  expanded: boolean
+  onToggle: () => void
+  isLast: boolean
+}) {
+  const badge = campaignStatusBadge(groupStatus(group))
+  const repCount = group.allReps.length
+
+  return (
+    <tr
+      onClick={onToggle}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F9F8F6')}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+      style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5', cursor: 'pointer' }}
+    >
+      <td style={{ padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <svg
+            viewBox="0 0 20 20" fill="currentColor" width="13" height="13"
+            style={{ flexShrink: 0, color: '#9CA3AF', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }}
+          >
+            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+          </svg>
+          <span style={{ fontWeight: '700', color: '#0D0D0D', fontSize: '14px' }}>
+            {group.name}
+          </span>
+          <span style={{
+            fontSize: '11px', fontWeight: '500', color: '#6B7280',
+            backgroundColor: '#F3F4F6', padding: '1px 7px', borderRadius: '10px',
+          }}>
+            {repCount} {repCount === 1 ? 'rep' : 'reps'}
+          </span>
+        </div>
+      </td>
+      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280' }}>—</td>
+      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+        {formatDate(group.event_date)}
+      </td>
+      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#0D0D0D', fontWeight: '500' }}>
+        {group.totalProspects}
+      </td>
+      <ProgressCell sent={group.sentProspects} total={group.totalProspects} />
+      <td style={{ padding: '14px 16px' }}>
+        <RepAvatars reps={group.allReps} />
+      </td>
+      <td style={{ padding: '14px 16px' }}>
+        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>
+          {badge.label}
+        </span>
+      </td>
+    </tr>
+  )
+}
+
+function RepCampaignRow({ campaign, isLast }: { campaign: CampaignWithStats; isLast: boolean }) {
+  const router = useRouter()
+  const badge = campaignStatusBadge(campaign.status)
+  const repName = campaign.assignedReps[0]?.displayName ?? '—'
+
+  return (
+    <tr
+      onClick={() => router.push(`/campaigns/${campaign.id}`)}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F9F8F6')}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+      style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5', cursor: 'pointer', backgroundColor: '#FAFAFA' }}
+    >
+      <td style={{ padding: '11px 16px 11px 38px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ color: '#D1D5DB', fontSize: '12px' }}>└</span>
+          <span style={{ fontSize: '13px', color: '#374151', fontWeight: '500' }}>{repName}</span>
+        </div>
+      </td>
+      <td style={{ padding: '11px 16px', fontSize: '13px', color: '#9CA3AF' }}>—</td>
+      <td style={{ padding: '11px 16px', fontSize: '13px', color: '#9CA3AF' }}>—</td>
+      <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0D0D0D', fontWeight: '500' }}>
+        {campaign.totalProspects}
+      </td>
+      <ProgressCell sent={campaign.sentProspects} total={campaign.totalProspects} />
+      <td style={{ padding: '11px 16px' }} />
+      <td style={{ padding: '11px 16px' }}>
+        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>
+          {badge.label}
+        </span>
+      </td>
+    </tr>
+  )
+}
+
 function CampaignRow({ campaign, isLast }: { campaign: CampaignWithStats; isLast: boolean }) {
   const router = useRouter()
   const badge = campaignStatusBadge(campaign.status)
-  const progress = campaign.totalProspects > 0
-    ? Math.round((campaign.sentProspects / campaign.totalProspects) * 100)
-    : 0
 
   return (
     <tr
@@ -244,40 +441,21 @@ function CampaignRow({ campaign, isLast }: { campaign: CampaignWithStats; isLast
       style={{ borderBottom: isLast ? 'none' : '1px solid #E5E5E5', cursor: 'pointer' }}
     >
       <td style={{ padding: '14px 16px' }}>
-        <span style={{ fontWeight: '600', color: '#0D0D0D', fontSize: '14px' }}>
-          {campaign.name}
-        </span>
+        <span style={{ fontWeight: '600', color: '#0D0D0D', fontSize: '14px' }}>{campaign.name}</span>
       </td>
-      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280' }}>
-        {campaign.theme ?? '—'}
-      </td>
+      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280' }}>{campaign.theme ?? '—'}</td>
       <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6B7280', whiteSpace: 'nowrap' }}>
         {formatDate(campaign.event_date)}
       </td>
       <td style={{ padding: '14px 16px', fontSize: '14px', color: '#0D0D0D', fontWeight: '500' }}>
         {campaign.totalProspects}
       </td>
-      <td style={{ padding: '14px 16px', minWidth: '160px' }}>
-        <div style={{
-          height: '4px', backgroundColor: '#F3F3F1', borderRadius: '2px', marginBottom: '5px',
-        }}>
-          <div style={{
-            height: '100%', width: `${progress}%`, backgroundColor: '#E7534F',
-            borderRadius: '2px', transition: 'width 0.3s',
-          }} />
-        </div>
-        <span style={{ fontSize: '12px', color: '#6B7280' }}>
-          {campaign.sentProspects} / {campaign.totalProspects} sent
-        </span>
-      </td>
+      <ProgressCell sent={campaign.sentProspects} total={campaign.totalProspects} />
       <td style={{ padding: '14px 16px' }}>
         <RepAvatars reps={campaign.assignedReps} />
       </td>
       <td style={{ padding: '14px 16px' }}>
-        <span style={{
-          padding: '3px 10px', borderRadius: '20px', fontSize: '12px',
-          fontWeight: '500', backgroundColor: badge.bg, color: badge.color,
-        }}>
+        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '500', backgroundColor: badge.bg, color: badge.color }}>
           {badge.label}
         </span>
       </td>
