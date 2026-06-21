@@ -369,6 +369,80 @@ All code committed and pushed. Deployed to Vercel. No new migrations required.
 
 ---
 
+## Session: 2026-06-21 — Full rebrand: TOM → SIGNAL with ADAPT brand overhaul
+
+### What changed
+
+Complete UI rebrand and visual overhaul. Every trace of "TOM / The Outreach Machine" is replaced with "SIGNAL". The visual design shifts from a soft, warm, rounded aesthetic to a sharp enterprise editorial style aligned with ADAPT's brand guidelines.
+
+**Design tokens** (`app/globals.css`, `app/layout.tsx`):
+- Full ADAPT palette as CSS vars: `#F8F8F8` body, `#E4E4E4` borders, `#E7534F` red, `#0A0A0A` black, grey scale
+- Geist font (`next/font`) removed; system "Helvetica Neue", Helvetica, Arial, sans-serif applied globally
+- `<title>` metadata: `"TOM – The Outreach Machine"` → `"SIGNAL"`
+
+**Sidebar** (`components/Sidebar.tsx`):
+- Background `#0A0A0A`, right border `#1C1C1C`
+- "SIGNAL" all-caps wordmark with `letterSpacing: 0.18em`, fontWeight 700 — "S" always visible, "IGNAL" slides in on expand
+- Active nav: `borderLeft: '2px solid #E7534F'` via `NavBorder` wrapper component — no red background fill
+- Inactive nav: `#9A9A9A` text, hover `rgba(white, 6%)`
+- All borders/radii tightened to 2px; profile avatar adjusted for dark theme
+
+**Login page** (`app/login/page.tsx`):
+- Background `#0A0A0A`; "SIGNAL" + "by ADAPT" all-caps wordmark; sharp-cornered inputs/button
+
+**Campaigns** (`CampaignsClient.tsx`, `NewCampaignModal.tsx`, `campaigns/[id]/page.tsx`, `TabNav.tsx`, `ProspectsTable.tsx`, `CampaignDetailsForm.tsx`, `AIInsightsTab.tsx`, `EmailLogsTab.tsx`):
+- Filter pills → underline tabs (`borderBottom: '2px solid #E7534F'`)
+- All border radii: buttons/inputs/badges → 2px, modals → 4px; table containers → no radius
+- Row padding tightened (14px → 10px); table header `#FAFAFA` bg, `#9A9A9A` text
+- "Sent via SIGNAL" (was "Sent via TOM"); tier badge Tailwind classes → inline ADAPT styles
+- `boxShadow` removed from all modals; `border: '1px solid #E4E4E4'` added instead
+
+**Events** (`EventsClient.tsx`, `EventDetailClient.tsx`):
+- Same border-radius/colour/spacing sweep; body bg `#F7F6F3` → `#F8F8F8`; borders `#E5E5E5` → `#E4E4E4`
+- Grey text values aligned: `#6B7280` → `#5F5F5F`, `#9CA3AF` → `#9A9A9A`, `#0D0D0D` → `#0A0A0A`
+
+**Users** (`UsersClient.tsx`):
+- Modal radii 12px → 4px; buttons 2px; "TOM" → "SIGNAL" in confirm copy
+- Same colour/border sweep as above
+
+**AI Context** (`app/ai-context/page.tsx`):
+- `TomEvent` type alias → `SignalEvent`; bg/border/radius sweep
+
+**Name sweep** (all non-dir occurrences):
+- `app/events/actions.ts`: `TOM-Bot/1.0` → `SIGNAL-Bot/1.0`
+- `package.json` name: `"tom-outreach-machine"` → `"signal"`
+- `ai/HANDOVER.md` + `ai/ACTION_INVENTORY.md` headings updated
+
+### Files touched
+```
+modified: app/globals.css
+modified: app/layout.tsx
+modified: components/Sidebar.tsx
+modified: app/login/page.tsx
+modified: app/campaigns/components/CampaignsClient.tsx
+modified: app/campaigns/components/NewCampaignModal.tsx
+modified: app/campaigns/[id]/page.tsx
+modified: app/campaigns/[id]/components/TabNav.tsx
+modified: app/campaigns/[id]/components/ProspectsTable.tsx
+modified: app/campaigns/[id]/components/CampaignDetailsForm.tsx
+modified: app/campaigns/[id]/components/AIInsightsTab.tsx
+modified: app/campaigns/[id]/components/EmailLogsTab.tsx
+modified: app/events/components/EventsClient.tsx
+modified: app/events/[id]/components/EventDetailClient.tsx
+modified: app/users/components/UsersClient.tsx
+modified: app/ai-context/page.tsx
+modified: app/events/actions.ts
+modified: ai/HANDOVER.md
+modified: ai/ACTION_INVENTORY.md
+modified: package.json
+```
+
+### Current status
+
+All code committed (`c8edb1f`) and pushed to `main`. Build passes clean — zero TypeScript errors, all 13 routes compiled. Vercel will deploy automatically. No migrations required, no manual steps required.
+
+---
+
 ## Unresolved Issues
 - **Email sending not implemented** — email logs and sent counts are mock data. Graph API (Outlook) integration not started.
 - **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
