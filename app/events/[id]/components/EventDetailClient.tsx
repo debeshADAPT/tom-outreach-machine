@@ -304,7 +304,7 @@ const CHANGE_LABELS: Record<string, { label: string; color: string; bg: string }
 function ChangelogRow({ entry }: { entry: EventChangelogEntry }) {
   const [expanded, setExpanded] = useState(false)
   const meta = CHANGE_LABELS[entry.change_type ?? ''] ?? { label: entry.change_type ?? '—', color: '#374151', bg: '#F3F4F6' }
-  const hasPrevBrief = entry.change_type === 'brief_synced' && entry.detail?.previous_brief
+  const hasPrevBrief = entry.change_type === 'brief_synced' && !!entry.detail?.previous_brief
 
   const dateStr = new Date(entry.changed_at).toLocaleString('en-AU', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
