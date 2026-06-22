@@ -443,6 +443,50 @@ All code committed (`c8edb1f`) and pushed to `main`. Build passes clean — zero
 
 ---
 
+## Session: 2026-06-22 — Animated login page + SIGNAL logo component
+
+### What changed
+
+**`components/SignalLogo.tsx`** (new):
+- Animated equaliser/waveform icon: 7 vertical bars + 2 red dots, staggered CSS `@keyframes` shockwave pulse every 2s (centre fires first, radiates outward)
+- Bars: grey `#9A9A9A`, centre bar red `#E7534F`; `transformOrigin: center` so bars scale from midpoint
+- "SIGNAL" wordmark below — `A` floats 6px above baseline via `position: relative; bottom`, with a `2px #E7534F` underline trimmed to glyph width (`right: 0.18em` excludes trailing letter-spacing)
+- `size="lg"` (animated, login page) / `size="sm"` (static)
+- Keyframe: shockwave profile — near-instant rise (`cubic-bezier(0.1,0,0.2,1)`), sharp snap back, long rest; peak `scaleY(2.1)`
+
+**`components/GlobeBackground.tsx`** (new):
+- Full-viewport `<canvas>` background animation — orthographic-projected dot globe
+- Grid built from explicit parallels (`-75°` to `+75°` every 15°) + 18 meridians; fill dots at cell centres (smaller, darker)
+- Meridian dots skip ±1° of each parallel to prevent overlap at intersections
+- Depth shading via `z`-based opacity; back-face culled (`z < 0`)
+- Slow continuous spin (`SPIN_SPEED = 0.0014`); static centred position
+- Resizes to viewport on `window.resize`
+
+**`app/login/page.tsx`**:
+- Globe canvas behind everything (`z-index: 0`), card at `z-index: 1`
+- Card: `rgba(14,14,14,0.75)` + `backdropFilter: blur(12px)` + `1px solid rgba(255,255,255,0.06)` + `border-radius: 8px`; subtle red `box-shadow` glow on hover (`0.4s ease`)
+- Fields use `placeholder` instead of labels (removes ~70px height, card closer to square)
+- Button: transparent default with `rgba(255,255,255,0.15)` border, all-caps narrow tracking; fills `#E7534F` on hover (`0.2s ease`)
+
+**`components/Sidebar.tsx`**:
+- `ExpandedLogo` inline component: "SIGNAL" wordmark at 15px with floating A (same treatment as login, scaled down)
+- `CollapsedWaveform` inline component: 5-bar static mini waveform; on `mouseenter` increments `pulseKey` — each bar gets `key={pulseKey-i}` forcing remount, replaying `signal-bar-once` CSS animation (iteration-count: 1, shockwave profile)
+- Header area replaces the "S" + sliding "IGNAL" split with cross-fading between the two components
+
+### Files touched
+```
+new:      components/SignalLogo.tsx
+new:      components/GlobeBackground.tsx
+modified: app/login/page.tsx
+modified: components/Sidebar.tsx
+```
+
+### Current status
+
+All code written. Not yet committed. No migrations required, no manual steps required.
+
+---
+
 ## Unresolved Issues
 - **Email sending not implemented** — email logs and sent counts are mock data. Graph API (Outlook) integration not started.
 - **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.

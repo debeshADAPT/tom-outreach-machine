@@ -96,6 +96,82 @@ function IconSignOut() {
   )
 }
 
+// ─── Logo components ──────────────────────────────────────────────────────────
+
+// Expanded sidebar: SIGNAL wordmark with floating A — matches login page design
+function ExpandedLogo() {
+  return (
+    <div
+      style={{
+        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+        fontWeight: 700,
+        fontSize: '15px',
+        letterSpacing: '0.18em',
+        color: '#FFFFFF',
+        whiteSpace: 'nowrap',
+        userSelect: 'none',
+        lineHeight: 1,
+      }}
+    >
+      SIGN
+      <span style={{ position: 'relative', display: 'inline-block', bottom: '3px' }}>
+        A
+        <span
+          style={{
+            position: 'absolute',
+            bottom: '-4.5px',
+            left: 0,
+            right: '0.18em',
+            height: '1.5px',
+            backgroundColor: '#E7534F',
+          }}
+        />
+      </span>
+      L
+    </div>
+  )
+}
+
+// Collapsed sidebar: 5-bar waveform, static, pulses once on hover
+const MINI_BAR_HEIGHTS = [6, 10, 16, 10, 6]
+const MINI_BAR_DELAYS  = ['0.2s', '0.1s', '0s', '0.1s', '0.2s']
+
+function CollapsedWaveform() {
+  const [pulseKey, setPulseKey] = useState(0)
+
+  return (
+    <div
+      onMouseEnter={() => setPulseKey(k => k + 1)}
+      style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 0', cursor: 'default' }}
+    >
+      {MINI_BAR_HEIGHTS.map((h, i) => (
+        <span
+          // key change forces remount → CSS animation replays from 0
+          key={`${pulseKey}-${i}`}
+          style={{
+            width: '3px',
+            height: `${h}px`,
+            borderRadius: '1.5px',
+            backgroundColor: i === 2 ? '#E7534F' : '#9A9A9A',
+            display: 'block',
+            transformOrigin: 'center',
+            animation: pulseKey > 0
+              ? `signal-bar-once 0.65s ease-out ${MINI_BAR_DELAYS[i]} 1 forwards`
+              : 'none',
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes signal-bar-once {
+          0%  { transform: scaleY(1); animation-timing-function: cubic-bezier(0.1,0,0.2,1); }
+          7%  { transform: scaleY(2.2); animation-timing-function: cubic-bezier(0.4,0,1,1); }
+          22% { transform: scaleY(1); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getInitials(name: string | null | undefined): string {
@@ -261,36 +337,34 @@ export default function Sidebar() {
       }}
       className="h-screen flex flex-col flex-shrink-0"
     >
-      {/* Logo — SIGNAL wordmark */}
-      <div className="flex items-center px-4 py-5 overflow-hidden" style={{ minHeight: '64px' }}>
-        <span
-          style={{
-            color: '#FFFFFF', flexShrink: 0,
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-            fontWeight: 700, fontSize: '15px', letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-          }}
-        >
-          S
-        </span>
-        <div
-          style={{
-            overflow: 'hidden',
-            width: collapsed ? '0px' : '80px',
-            opacity: collapsed ? 0 : 1,
-            transition: 'width 200ms ease, opacity 150ms ease',
-          }}
-        >
-          <span
-            style={{
-              color: '#FFFFFF', whiteSpace: 'nowrap',
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-              fontWeight: 700, fontSize: '15px', letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-            }}
-          >
-            IGNAL
-          </span>
+      {/* Logo */}
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', minHeight: '64px',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          padding: collapsed ? '20px 0' : '20px 16px',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Collapsed: mini waveform */}
+        <div style={{
+          opacity: collapsed ? 1 : 0,
+          width: collapsed ? 'auto' : 0,
+          overflow: 'hidden',
+          transition: 'opacity 150ms ease',
+          flexShrink: 0,
+        }}>
+          <CollapsedWaveform />
+        </div>
+        {/* Expanded: SIGNAL wordmark with floating A */}
+        <div style={{
+          opacity: collapsed ? 0 : 1,
+          width: collapsed ? 0 : 'auto',
+          overflow: collapsed ? 'hidden' : 'visible',
+          transition: 'opacity 200ms ease',
+          flexShrink: 0,
+        }}>
+          <ExpandedLogo />
         </div>
       </div>
 
