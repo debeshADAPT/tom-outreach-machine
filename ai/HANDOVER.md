@@ -483,24 +483,54 @@ modified: components/Sidebar.tsx
 
 ### Current status
 
-All code written. Not yet committed. No migrations required, no manual steps required.
+Committed `00a632e` and pushed to `main`. Vercel deploying automatically. No migrations required, no manual steps required.
+
+---
+
+## Session: 2026-06-22 — Graph API email sending plan (deferred)
+
+### What changed
+
+Full Azure/M365 setup checklist and implementation plan produced for Microsoft Graph API email sending. Decision made to defer pending internal Azure App Registration approval.
+
+**Plan summary (not yet implemented):**
+- `lib/graph-client.ts` — `sendMailAsUser()` via `@azure/identity` + `@microsoft/microsoft-graph-client`
+- `supabase/migrations/009_send_tracking.sql` — add `last_contacted_at timestamptz`
+- `app/campaigns/[id]/actions.ts` — `sendEmail(prospectId, stepKey)` server action with template resolution priority chain and DB update on success
+- `app/campaigns/[id]/components/SequenceTab.tsx` — "Send now" button in EmailModal view mode (current step only)
+- `lib/types.ts` — add `last_contacted_at` to `Prospect`
+
+**Azure requirements (pending approval):**
+- App Registration with `Mail.Send` application permission + admin consent
+- Application Access Policy scoped to a mail-enabled security group of rep mailboxes
+- Env vars: `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`
+
+**`SUPABASE_SERVICE_ROLE_KEY` confirmed set in Vercel** — `/users` page is now fully operational in production.
+
+### Files touched
+```
+none (plan only — no code written this session)
+```
+
+### Current status
+
+Plan documented. Implementation on hold pending Azure approval. No migrations required.
 
 ---
 
 ## Unresolved Issues
-- **Email sending not implemented** — email logs and sent counts are mock data. Graph API (Outlook) integration not started.
+- **Email sending not implemented** — Graph API plan ready (see session above); blocked on Azure App Registration approval.
 - **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
 - **Contacts / Email Templates / Connectors** nav items are disabled stubs.
 - **`proxy.ts`** at root is middleware-shaped but never registered as `middleware.ts` — auth relies on server component checks only.
 - **`lib/supabase.js`** — legacy unused client, safe to delete.
 - **`startProspectSequence` / `bulkStartSequences` / `saveSequenceDelays`** — actions exist, no UI trigger.
 - **AI Context Creator — no deduplication on insert** — uploading the same CSV twice creates duplicate prospect rows. No unique constraint on (assigned_to, full_name, company).
-- **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()` after returning. Reliable on Fluid Compute; may not complete on a cold-start termination. Resync Brief from the detail page is synchronous and always reliable.
-- **Events Hub — regex-based HTML extraction** — `extractStructuredContent` uses regex, not a DOM parser. Nested tags of the same type will close early. Good enough for event pages; replace with `node-html-parser` if extraction quality degrades.
-- **User Management — `SUPABASE_SERVICE_ROLE_KEY` must be set in Vercel env vars** — if missing, `/users` throws on load. Add via Vercel Dashboard → Settings → Environment Variables.
+- **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()` after returning. Reliable on Fluid Compute; may not complete on a cold-start termination. Resync Brief is synchronous and always reliable.
+- **Events Hub — regex-based HTML extraction** — `extractStructuredContent` uses regex, not a DOM parser. Replace with `node-html-parser` if extraction quality degrades.
 - **User Management — no role edit** — display name is editable inline but role (admin/staff) can only be changed via direct SQL. Could add a role toggle to `UserRow` if needed.
 
 ---
 
 ## Next Recommended Task
-**Microsoft Graph API email sending.** The sequence UI is complete; the gap is dispatching emails and capturing replies. Add `sendEmail(prospectId, stepKey)` in `app/campaigns/[id]/actions.ts` — calls Graph API, updates `prospects.status` and `prospects.sent_at`. Replies can be polled or webhooked into a `/api/graph/webhook` route that sets `status = 'replied'`.
+**Prospect deduplication in AI Context Creator.** Uploading the same CSV twice creates duplicate rows. Add a unique constraint on `(assigned_to, lower(full_name), lower(company))` in a new migration, and handle the conflict in `insertAiContextProspects` with an upsert or a pre-flight dedupe check that surfaces duplicates to the user before inserting.
