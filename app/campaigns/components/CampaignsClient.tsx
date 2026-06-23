@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDate, campaignStatusBadge } from '@/lib/utils'
 import type { CampaignWithStats } from '@/lib/types'
-import NewCampaignModal from './NewCampaignModal'
 import { RealtimeRefresher } from '@/components/RealtimeRefresher'
 
 const FILTERS = ['All', 'Active', 'Draft', 'Completed'] as const
@@ -22,6 +21,7 @@ interface EventGroup {
   event_id: string
   name: string
   event_date: string | null
+  eventTheme: string | null
   campaigns: CampaignWithStats[]
   totalProspects: number
   sentProspects: number
@@ -43,6 +43,7 @@ function groupAndSort(campaigns: CampaignWithStats[]): TableItem[] {
           event_id: c.event_id,
           name: c.name,
           event_date: c.event_date,
+          eventTheme: c.eventTheme ?? null,
           campaigns: [],
           totalProspects: 0,
           sentProspects: 0,
@@ -143,7 +144,6 @@ function RepAvatars({ reps }: { reps: { userId: string; displayName: string }[] 
 
 export default function CampaignsClient({ campaigns, isAdmin, accessError }: Props) {
   const [filter, setFilter] = useState<Filter>('All')
-  const [showModal, setShowModal] = useState(false)
   const [dismissedError, setDismissedError] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
@@ -192,19 +192,6 @@ export default function CampaignsClient({ campaigns, isAdmin, accessError }: Pro
             {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
           </p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              padding: '8px 16px', backgroundColor: '#E7534F', color: '#FFFFFF',
-              border: 'none', borderRadius: '2px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94642')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E7534F')}
-          >
-            + New Campaign
-          </button>
-        )}
       </div>
 
       {/* Filter tabs — underline style */}
@@ -228,17 +215,15 @@ export default function CampaignsClient({ campaigns, isAdmin, accessError }: Pro
       </div>
 
       {items.length === 0 ? (
-        <EmptyState onNew={() => setShowModal(true)} isFiltered={filter !== 'All'} isAdmin={isAdmin} />
+        <EmptyState isFiltered={filter !== 'All'} isAdmin={isAdmin} />
       ) : (
         <CampaignsTable items={items} expandedGroups={expandedGroups} onToggleGroup={toggleGroup} />
       )}
-
-      {showModal && <NewCampaignModal onClose={() => setShowModal(false)} />}
     </div>
   )
 }
 
-function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFiltered: boolean; isAdmin: boolean }) {
+function EmptyState({ isFiltered, isAdmin }: { isFiltered: boolean; isAdmin: boolean }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -248,26 +233,13 @@ function EmptyState({ onNew, isFiltered, isAdmin }: { onNew: () => void; isFilte
       <p style={{ fontSize: '15px', fontWeight: '600', color: '#0A0A0A', marginBottom: '6px' }}>
         {isFiltered ? 'No campaigns match this filter' : 'No campaigns yet'}
       </p>
-      <p style={{ fontSize: '13px', color: '#9A9A9A', marginBottom: '24px' }}>
+      <p style={{ fontSize: '13px', color: '#9A9A9A', margin: 0 }}>
         {isFiltered
           ? 'Try selecting a different filter above.'
           : isAdmin
-          ? 'Create your first one to get started.'
+          ? 'Assign reps to an event in Events Hub to create campaigns.'
           : 'You haven\'t been assigned to any campaigns yet.'}
       </p>
-      {!isFiltered && isAdmin && (
-        <button
-          onClick={onNew}
-          style={{
-            padding: '8px 16px', backgroundColor: '#E7534F', color: '#FFFFFF',
-            border: 'none', borderRadius: '2px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D94642')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#E7534F')}
-        >
-          + New Campaign
-        </button>
-      )}
     </div>
   )
 }
@@ -376,7 +348,9 @@ function EventGroupRow({ group, expanded, onToggle, isLast }: {
           </span>
         </div>
       </td>
-      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#9A9A9A' }}>—</td>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: group.eventTheme ? '#5F5F5F' : '#9A9A9A' }}>
+        {group.eventTheme ?? '—'}
+      </td>
       <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F', whiteSpace: 'nowrap' }}>
         {formatDate(group.event_date)}
       </td>
@@ -444,7 +418,9 @@ function CampaignRow({ campaign, isLast }: { campaign: CampaignWithStats; isLast
       <td style={{ padding: '10px 16px' }}>
         <span style={{ fontWeight: '600', color: '#0A0A0A', fontSize: '13px' }}>{campaign.name}</span>
       </td>
-      <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F' }}>{campaign.theme ?? '—'}</td>
+      <td style={{ padding: '10px 16px', fontSize: '13px', color: (campaign.eventTheme ?? campaign.theme) ? '#5F5F5F' : '#9A9A9A' }}>
+        {campaign.eventTheme ?? campaign.theme ?? '—'}
+      </td>
       <td style={{ padding: '10px 16px', fontSize: '13px', color: '#5F5F5F', whiteSpace: 'nowrap' }}>
         {formatDate(campaign.event_date)}
       </td>

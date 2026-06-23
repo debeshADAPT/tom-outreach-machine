@@ -260,6 +260,7 @@ export default function AiContextPage() {
   // Upload state
   const [uploadStage, setUploadStage] = useState<UploadStage>('idle')
   const [uploadCount, setUploadCount] = useState<number | null>(null)
+  const [uploadSkipped, setUploadSkipped] = useState<number>(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [csvRawText, setCsvRawText] = useState<string>('')
@@ -357,6 +358,7 @@ export default function AiContextPage() {
       setUploadStage('idle')
     } else {
       setUploadCount(result.inserted)
+      setUploadSkipped(result.skipped)
       setUploadStage('done')
       await loadProspects()  // replaces list — fixes duplicate-on-upload bug
     }
@@ -365,6 +367,7 @@ export default function AiContextPage() {
   function resetUpload() {
     setUploadStage('idle')
     setUploadCount(null)
+    setUploadSkipped(0)
     setUploadError(null)
     setCsvHeaders([])
     setCsvRawText('')
@@ -507,6 +510,7 @@ export default function AiContextPage() {
               {uploadStage === 'done' && uploadCount !== null ? (
                 <div style={{ fontSize: '13px', color: '#16A34A' }}>
                   ✓ {uploadCount} prospect{uploadCount !== 1 ? 's' : ''} added.
+                  {uploadSkipped > 0 && ` ${uploadSkipped} duplicate${uploadSkipped !== 1 ? 's' : ''} skipped.`}
                 </div>
               ) : uploadStage === 'uploading' ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6B7280' }}>

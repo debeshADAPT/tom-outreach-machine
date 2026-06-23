@@ -18,6 +18,7 @@ export interface CampaignWithStats extends Campaign {
   totalProspects: number
   sentProspects: number
   assignedReps: { userId: string; displayName: string }[]
+  eventTheme: string | null
 }
 
 export interface Prospect {

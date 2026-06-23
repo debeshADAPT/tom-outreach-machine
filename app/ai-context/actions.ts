@@ -312,14 +312,34 @@ export async function insertAiContextProspects(
     email: string | null
     linkedin_url?: string | null
   }>
-): Promise<{ inserted: number; error?: string }> {
+): Promise<{ inserted: number; skipped: number; error?: string }> {
   const userId = await requireAuth()
   const supabase = await createSupabaseServer()
+
+  // Deduplicate by email: check which rows with a non-null email already exist
+  const emailRows = rows.filter(r => r.email)
+  let existingEmails = new Set<string>()
+
+  if (emailRows.length > 0) {
+    const { data: existing } = await supabase
+      .from('prospects')
+      .select('email')
+      .in('email', emailRows.map(r => r.email!))
+      .eq('assigned_to', userId)
+      .is('campaign_id', null)
+
+    existingEmails = new Set((existing ?? []).map(p => p.email as string))
+  }
+
+  const rowsToInsert = rows.filter(r => !r.email || !existingEmails.has(r.email))
+  const skipped = rows.length - rowsToInsert.length
+
+  if (rowsToInsert.length === 0) return { inserted: 0, skipped }
 
   const { data, error } = await supabase
     .from('prospects')
     .insert(
-      rows.map(r => ({
+      rowsToInsert.map(r => ({
         // campaign_id intentionally omitted (nullable — context-only prospect)
         assigned_to: userId,
         full_name: r.full_name || null,
@@ -331,8 +351,8 @@ export async function insertAiContextProspects(
     )
     .select('id')
 
-  if (error) return { inserted: 0, error: error.message }
-  return { inserted: (data ?? []).length }
+  if (error) return { inserted: 0, skipped, error: error.message }
+  return { inserted: (data ?? []).length, skipped }
 }
 
 export async function getAiContextProspects(): Promise<AiContextProspect[]> {

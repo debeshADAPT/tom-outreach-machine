@@ -44,8 +44,15 @@ export default async function CampaignsPage({ searchParams }: Props) {
   const campaignList = (campaigns ?? []) as unknown as Array<Campaign & { prospects: [{ count: number }] }>
   const campaignIds = campaignList.map(c => c.id)
 
-  // Fetch sent counts and rep assignments in parallel
-  const [{ data: sentRows }, { data: allAssignmentsData }] = await Promise.all([
+  // Collect distinct event_ids to fetch briefs
+  const eventIds = [...new Set(
+    campaignList
+      .map(c => (c as unknown as { event_id?: string | null }).event_id)
+      .filter((id): id is string => Boolean(id))
+  )]
+
+  // Fetch sent counts, rep assignments, and event briefs in parallel
+  const [{ data: sentRows }, { data: allAssignmentsData }, { data: eventRows }] = await Promise.all([
     campaignIds.length > 0
       ? supabase
           .from('prospects')
@@ -58,6 +65,12 @@ export default async function CampaignsPage({ searchParams }: Props) {
           .from('campaign_assignments')
           .select('campaign_id, user_id')
           .in('campaign_id', campaignIds)
+      : Promise.resolve({ data: [] }),
+    eventIds.length > 0
+      ? supabase
+          .from('events')
+          .select('id, brief, brief_status')
+          .in('id', eventIds)
       : Promise.resolve({ data: [] }),
   ])
 
@@ -84,21 +97,32 @@ export default async function CampaignsPage({ searchParams }: Props) {
     sentMap.set(row.campaign_id, (sentMap.get(row.campaign_id) ?? 0) + 1)
   }
 
-  const campaignsWithStats: CampaignWithStats[] = campaignList.map(c => ({
-    id: c.id,
-    user_id: c.user_id,
-    name: c.name,
-    theme: c.theme,
-    event_id: (c as unknown as { event_id?: string | null }).event_id ?? null,
-    event_date: c.event_date,
-    location: c.location,
-    event_brief: c.event_brief,
-    status: c.status,
-    created_at: c.created_at,
-    totalProspects: c.prospects?.[0]?.count ?? 0,
-    sentProspects: sentMap.get(c.id) ?? 0,
-    assignedReps: assignmentsMap.get(c.id) ?? [],
-  }))
+  // Build event brief map: event_id → first key_theme (or null if brief not ready)
+  const eventBriefMap = new Map<string, string | null>()
+  for (const e of (eventRows ?? []) as { id: string; brief: { key_themes?: string[] } | null; brief_status: string | null }[]) {
+    const firstTheme = e.brief?.key_themes?.[0] ?? null
+    eventBriefMap.set(e.id, firstTheme)
+  }
+
+  const campaignsWithStats: CampaignWithStats[] = campaignList.map(c => {
+    const eventId = (c as unknown as { event_id?: string | null }).event_id ?? null
+    return {
+      id: c.id,
+      user_id: c.user_id,
+      name: c.name,
+      theme: c.theme,
+      event_id: eventId,
+      event_date: c.event_date,
+      location: c.location,
+      event_brief: c.event_brief,
+      status: c.status,
+      created_at: c.created_at,
+      totalProspects: c.prospects?.[0]?.count ?? 0,
+      sentProspects: sentMap.get(c.id) ?? 0,
+      assignedReps: assignmentsMap.get(c.id) ?? [],
+      eventTheme: eventId ? (eventBriefMap.get(eventId) ?? null) : null,
+    }
+  })
 
   return <CampaignsClient campaigns={campaignsWithStats} isAdmin={isAdmin} accessError={accessError} />
 }
