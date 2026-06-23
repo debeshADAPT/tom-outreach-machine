@@ -226,26 +226,23 @@ async function runScrape(eventId: string, userId: string): Promise<{ ok: boolean
     detail: previousBrief ? { previous_brief: previousBrief } : null,
   })
 
-  // Build list of URLs to fetch
-  const urlTargets: Array<{ label: string; url: string }> = []
-  if (event.url_main)     urlTargets.push({ label: 'Main Event',   url: event.url_main })
-  if (event.url_speakers) urlTargets.push({ label: 'Speakers',     url: event.url_speakers })
-  if (event.url_agenda)   urlTargets.push({ label: 'Agenda',       url: event.url_agenda })
-
-  if (urlTargets.length === 0) {
-    await supabase.from('events').update({ brief_status: 'failed' }).eq('id', eventId)
-    return { ok: false, error: 'No URLs to scrape' }
-  }
-
-  // Fetch all URLs (failures noted gracefully, not fatal)
-  const urlResults = await Promise.all(
-    urlTargets.map(async ({ label, url }) => {
-      const { content, ok } = await fetchUrlContent(url)
-      return { label, url, content, ok }
-    })
-  )
-
   try {
+    // Build list of URLs to fetch
+    const urlTargets: Array<{ label: string; url: string }> = []
+    if (event.url_main)     urlTargets.push({ label: 'Main Event',   url: event.url_main })
+    if (event.url_speakers) urlTargets.push({ label: 'Speakers',     url: event.url_speakers })
+    if (event.url_agenda)   urlTargets.push({ label: 'Agenda',       url: event.url_agenda })
+
+    if (urlTargets.length === 0) throw new Error('No URLs to scrape')
+
+    // Fetch all URLs (individual failures are noted gracefully, not fatal)
+    const urlResults = await Promise.all(
+      urlTargets.map(async ({ label, url }) => {
+        const { content, ok } = await fetchUrlContent(url)
+        return { label, url, content, ok }
+      })
+    )
+
     const prompt = buildBriefPrompt(event as Event, urlResults)
 
     const response = await anthropic.messages.create({
@@ -274,9 +271,19 @@ async function runScrape(eventId: string, userId: string): Promise<{ ok: boolean
 
     return { ok: true }
   } catch (err) {
-    // Do not overwrite any existing brief on failure
-    await supabase.from('events').update({ brief_status: 'failed' }).eq('id', eventId)
-    return { ok: false, error: err instanceof Error ? err.message : 'Scrape failed' }
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[runScrape] failed for event ${eventId}:`, err)
+
+    // Guarantee status is always reset — never left as pending.
+    // Inner try/catch so a Supabase network blip here can't itself throw
+    // and leave the event brief stuck polling forever.
+    try {
+      await supabase.from('events').update({ brief_status: 'failed' }).eq('id', eventId)
+    } catch (resetErr) {
+      console.error(`[runScrape] failed to reset brief_status for event ${eventId}:`, resetErr)
+    }
+
+    return { ok: false, error: message }
   }
 }
 
