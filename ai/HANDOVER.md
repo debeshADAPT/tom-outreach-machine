@@ -519,18 +519,68 @@ Plan documented. Implementation on hold pending Azure approval. No migrations re
 ---
 
 ## Unresolved Issues
-- **Email sending not implemented** — Graph API plan ready (see session above); blocked on Azure App Registration approval.
+- **Email sending not implemented** — Graph API plan ready (see 2026-06-22 session); blocked on Azure App Registration approval.
 - **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
 - **Contacts / Email Templates / Connectors** nav items are disabled stubs.
-- **`proxy.ts`** at root is middleware-shaped but never registered as `middleware.ts` — auth relies on server component checks only.
+- **`proxy.ts`** — In Next.js 16, `proxy.ts` at root IS the middleware (renamed from `middleware.ts`). It is active and runs on every request. Auth logic in the proxy checks for `auth-token` cookie. The proxy supplements (not replaces) server-component auth checks.
 - **`lib/supabase.js`** — legacy unused client, safe to delete.
 - **`startProspectSequence` / `bulkStartSequences` / `saveSequenceDelays`** — actions exist, no UI trigger.
-- **AI Context Creator — no deduplication on insert** — uploading the same CSV twice creates duplicate prospect rows. No unique constraint on (assigned_to, full_name, company).
+- **AI Context Creator — dedup only by email** — `009_prospect_dedup.sql` adds a partial unique index on `(email, assigned_to)` for null-campaign prospects with non-null email. Prospects without email (LinkedIn-only imports) are not deduplicated.
 - **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()` after returning. Reliable on Fluid Compute; may not complete on a cold-start termination. Resync Brief is synchronous and always reliable.
 - **Events Hub — regex-based HTML extraction** — `extractStructuredContent` uses regex, not a DOM parser. Replace with `node-html-parser` if extraction quality degrades.
 - **User Management — no role edit** — display name is editable inline but role (admin/staff) can only be changed via direct SQL. Could add a role toggle to `UserRow` if needed.
 
 ---
 
+## Session: 2026-06-23 — Bug fixes and cleanup
+
+### What changed
+
+**Bug 1 — Events Hub 404 on event click** (`app/events/[id]/page.tsx`):
+- Root cause: page was calling `getEventById()` (a `'use server'` action that creates its own Supabase client internally). In Next.js 16, the redundant client context caused the events query to return null silently, triggering `notFound()`.
+- Fix: Rewrote the page to query Supabase directly using the same client created for auth (mirrors the working `campaigns/[id]/page.tsx` pattern). Inline the two-step profile joins for reps and changelog authors. `getEventById` server action still exists for any other callers.
+
+**Bug 2 — Prospect dedup on AI Context insert** (`app/ai-context/actions.ts`, `supabase/migrations/009_prospect_dedup.sql`):
+- `insertAiContextProspects` now pre-flight selects rows with matching `(email, assigned_to, campaign_id IS NULL)` before inserting; skips duplicates and returns `{ inserted, skipped }`.
+- Upload done banner now shows "N added. M duplicates skipped." when applicable.
+- Migration `009_prospect_dedup.sql` adds `UNIQUE INDEX ON prospects(email, assigned_to) WHERE email IS NOT NULL AND campaign_id IS NULL` as a DB-level guard.
+
+**Cleanup 1 — Removed manual campaign creation** (`app/campaigns/components/CampaignsClient.tsx`, deleted `NewCampaignModal.tsx`):
+- Removed the "+ New Campaign" button from the header and empty state.
+- Removed `showModal` state, `NewCampaignModal` import and render.
+- EmptyState now tells admins to use Events Hub to create campaigns.
+- `createCampaign` server action kept in `campaigns/actions.ts` (used by the internal flow).
+
+**Cleanup 2 — Event theme in Campaigns list** (`app/campaigns/page.tsx`, `lib/types.ts`, `app/campaigns/components/CampaignsClient.tsx`):
+- `campaigns/page.tsx` collects distinct `event_id`s and fetches `events(id, brief, brief_status)` in the same parallel Promise.all as sent counts and assignments.
+- Extracts `brief.key_themes[0]` as `eventTheme: string | null` on each `CampaignWithStats`.
+- `EventGroup` now carries `eventTheme`; `EventGroupRow` and `CampaignRow` display it (muted `—` when absent or brief not yet scraped).
+
+### Files touched
+```
+modified: app/events/[id]/page.tsx
+modified: app/ai-context/actions.ts
+modified: app/ai-context/page.tsx
+modified: app/campaigns/components/CampaignsClient.tsx
+modified: app/campaigns/page.tsx
+modified: lib/types.ts
+new:      supabase/migrations/009_prospect_dedup.sql
+deleted:  app/campaigns/components/NewCampaignModal.tsx
+```
+
+### Current status
+
+All code committed (`ba270db`) and pushed. Vercel will deploy automatically. Zero TypeScript errors; all 13 routes compile.
+
+**Mandatory manual step:**
+Run `supabase/migrations/009_prospect_dedup.sql` in Supabase Dashboard → SQL Editor:
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS prospects_email_assigned_dedup
+  ON public.prospects (email, assigned_to)
+  WHERE email IS NOT NULL AND campaign_id IS NULL;
+```
+
+---
+
 ## Next Recommended Task
-**Prospect deduplication in AI Context Creator.** Uploading the same CSV twice creates duplicate rows. Add a unique constraint on `(assigned_to, lower(full_name), lower(company))` in a new migration, and handle the conflict in `insertAiContextProspects` with an upsert or a pre-flight dedupe check that surfaces duplicates to the user before inserting.
+**Email sending via Graph API.** The plan is fully documented (2026-06-22 session). Blocked on Azure App Registration approval — implement once `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` are available in Vercel env vars.
