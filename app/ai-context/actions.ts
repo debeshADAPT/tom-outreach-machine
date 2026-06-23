@@ -128,13 +128,16 @@ confidence_score must be an integer 1–5: 5 = uniquely identified with high cer
 
     return { ok: true }
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[runProspectIntelligence] failed for prospect ${prospectId} (${prospect.full_name ?? 'unknown'}):`, err)
+
     // Do not overwrite existing intelligence on failure
     await supabase
       .from('prospects')
       .update({ intelligence_status: 'failed' })
       .eq('id', prospectId)
 
-    return { ok: false, error: err instanceof Error ? err.message : 'Research failed' }
+    return { ok: false, error: message }
   }
 }
 
