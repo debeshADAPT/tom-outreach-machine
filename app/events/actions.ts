@@ -36,6 +36,7 @@ export interface Event {
   event_type: 'EDGE' | 'Roundtable'
   date: string
   location: string
+  theme: string | null
   url_main: string | null
   url_speakers: string | null
   url_agenda: string | null
@@ -290,6 +291,7 @@ export async function createEvent(formData: FormData): Promise<{ ok: boolean; ev
   const eventType    = formData.get('event_type')    as string | null
   const date         = formData.get('date')          as string | null
   const location     = formData.get('location')      as string | null
+  const theme        = (formData.get('theme')         as string | null) || null
   const urlMain      = (formData.get('url_main')      as string | null) || null
   const urlSpeakers  = (formData.get('url_speakers')  as string | null) || null
   const urlAgenda    = (formData.get('url_agenda')    as string | null) || null
@@ -307,6 +309,7 @@ export async function createEvent(formData: FormData): Promise<{ ok: boolean; ev
       event_type:    eventType,
       date,
       location,
+      theme,
       url_main:      urlMain,
       url_speakers:  urlSpeakers,
       url_agenda:    urlAgenda,
@@ -440,6 +443,7 @@ export async function updateEvent(
     sf_identifier?: string
     date?: string
     location?: string
+    theme?: string | null
     url_main?: string | null
     url_speakers?: string | null
     url_agenda?: string | null

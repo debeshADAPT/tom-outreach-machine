@@ -69,7 +69,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
     eventIds.length > 0
       ? supabase
           .from('events')
-          .select('id, brief, brief_status')
+          .select('id, theme')
           .in('id', eventIds)
       : Promise.resolve({ data: [] }),
   ])
@@ -97,11 +97,10 @@ export default async function CampaignsPage({ searchParams }: Props) {
     sentMap.set(row.campaign_id, (sentMap.get(row.campaign_id) ?? 0) + 1)
   }
 
-  // Build event brief map: event_id → first key_theme (or null if brief not ready)
-  const eventBriefMap = new Map<string, string | null>()
-  for (const e of (eventRows ?? []) as { id: string; brief: { key_themes?: string[] } | null; brief_status: string | null }[]) {
-    const firstTheme = e.brief?.key_themes?.[0] ?? null
-    eventBriefMap.set(e.id, firstTheme)
+  // Build event theme map: event_id → user-entered theme
+  const eventThemeMap = new Map<string, string | null>()
+  for (const e of (eventRows ?? []) as { id: string; theme: string | null }[]) {
+    eventThemeMap.set(e.id, e.theme ?? null)
   }
 
   const campaignsWithStats: CampaignWithStats[] = campaignList.map(c => {
@@ -120,7 +119,7 @@ export default async function CampaignsPage({ searchParams }: Props) {
       totalProspects: c.prospects?.[0]?.count ?? 0,
       sentProspects: sentMap.get(c.id) ?? 0,
       assignedReps: assignmentsMap.get(c.id) ?? [],
-      eventTheme: eventId ? (eventBriefMap.get(eventId) ?? null) : null,
+      eventTheme: eventId ? (eventThemeMap.get(eventId) ?? null) : null,
     }
   })
 

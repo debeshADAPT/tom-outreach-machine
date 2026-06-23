@@ -367,6 +367,7 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
   const [sfId, setSfId]           = useState(initialEvent.sf_identifier)
   const [date, setDate]           = useState(initialEvent.date)
   const [location, setLocation]   = useState(initialEvent.location)
+  const [theme, setTheme]         = useState(initialEvent.theme ?? '')
   const [urlMain, setUrlMain]     = useState(initialEvent.url_main ?? '')
   const [urlSpeakers, setUrlSpeakers] = useState(initialEvent.url_speakers ?? '')
   const [urlAgenda, setUrlAgenda] = useState(initialEvent.url_agenda ?? '')
@@ -385,6 +386,7 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
       sf_identifier: sfId,
       date,
       location,
+      theme:         theme || null,
       url_main:      urlMain || null,
       url_speakers:  urlSpeakers || null,
       url_agenda:    urlAgenda || null,
@@ -473,6 +475,18 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>
+                    Theme / Tagline
+                  </label>
+                  <input
+                    value={theme} onChange={e => setTheme(e.target.value)}
+                    placeholder="e.g. AI-driven transformation in financial services"
+                    style={inputStyle}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#E5E5E5')}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>
                     Main Event URL
                   </label>
                   <input
@@ -551,6 +565,11 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
                 } />
                 <Field label="Location" value={initialEvent.location} />
                 <Field label="Type" value={initialEvent.event_type} />
+                {initialEvent.theme && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <Field label="Theme / Tagline" value={initialEvent.theme} />
+                  </div>
+                )}
               </div>
             )}
           </div>

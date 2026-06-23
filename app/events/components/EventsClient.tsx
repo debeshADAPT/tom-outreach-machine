@@ -305,6 +305,20 @@ function CreateEventModal({ onClose, onCreate }: {
             />
           </div>
 
+          {/* Theme */}
+          <div style={fieldGap}>
+            <label style={labelStyle}>
+              Theme / Tagline{' '}
+              <span style={{ fontSize: '11px', fontWeight: '400', color: '#9CA3AF' }}>— optional</span>
+            </label>
+            <input
+              name="theme" placeholder="e.g. AI-driven transformation in financial services"
+              style={inputStyle}
+              onFocus={e => (e.currentTarget.style.borderColor = '#E7534F')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E4E4E4')}
+            />
+          </div>
+
           {/* URLs */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div>
