@@ -522,65 +522,89 @@ Plan documented. Implementation on hold pending Azure approval. No migrations re
 - **Email sending not implemented** — Graph API plan ready (see 2026-06-22 session); blocked on Azure App Registration approval.
 - **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
 - **Contacts / Email Templates / Connectors** nav items are disabled stubs.
-- **`proxy.ts`** — In Next.js 16, `proxy.ts` at root IS the middleware (renamed from `middleware.ts`). It is active and runs on every request. Auth logic in the proxy checks for `auth-token` cookie. The proxy supplements (not replaces) server-component auth checks.
+- **`proxy.ts`** — In Next.js 16, `proxy.ts` at root IS the middleware (renamed from `middleware.ts`). Active on every request; checks for `auth-token` cookie. Supplements server-component auth checks.
 - **`lib/supabase.js`** — legacy unused client, safe to delete.
 - **`startProspectSequence` / `bulkStartSequences` / `saveSequenceDelays`** — actions exist, no UI trigger.
-- **AI Context Creator — dedup only by email** — `009_prospect_dedup.sql` adds a partial unique index on `(email, assigned_to)` for null-campaign prospects with non-null email. Prospects without email (LinkedIn-only imports) are not deduplicated.
-- **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()` after returning. Reliable on Fluid Compute; may not complete on a cold-start termination. Resync Brief is synchronous and always reliable.
+- **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()` after returning. Reliable on Fluid Compute; may not complete on cold-start termination. Resync Brief is synchronous and always reliable.
 - **Events Hub — regex-based HTML extraction** — `extractStructuredContent` uses regex, not a DOM parser. Replace with `node-html-parser` if extraction quality degrades.
-- **User Management — no role edit** — display name is editable inline but role (admin/staff) can only be changed via direct SQL. Could add a role toggle to `UserRow` if needed.
+- **User Management — no role edit** — role (admin/staff) can only be changed via direct SQL. Could add a role toggle to `UserRow` if needed.
 
 ---
 
-## Session: 2026-06-23 — Bug fixes and cleanup
+## Session: 2026-06-23 — Bug fixes, cleanup, and AI Context hardening
 
 ### What changed
 
-**Bug 1 — Events Hub 404 on event click** (`app/events/[id]/page.tsx`):
-- Root cause: page was calling `getEventById()` (a `'use server'` action that creates its own Supabase client internally). In Next.js 16, the redundant client context caused the events query to return null silently, triggering `notFound()`.
-- Fix: Rewrote the page to query Supabase directly using the same client created for auth (mirrors the working `campaigns/[id]/page.tsx` pattern). Inline the two-step profile joins for reps and changelog authors. `getEventById` server action still exists for any other callers.
+**Events Hub 404 on event click** (`app/events/[id]/page.tsx`):
+- Root cause: page called `getEventById()` server action which created its own Supabase client, silently returning null → `notFound()` in Next.js 16.
+- Fix: rewrote page to query Supabase directly with the auth client (mirrors `campaigns/[id]/page.tsx`).
 
-**Bug 2 — Prospect dedup on AI Context insert** (`app/ai-context/actions.ts`, `supabase/migrations/009_prospect_dedup.sql`):
-- `insertAiContextProspects` now pre-flight selects rows with matching `(email, assigned_to, campaign_id IS NULL)` before inserting; skips duplicates and returns `{ inserted, skipped }`.
-- Upload done banner now shows "N added. M duplicates skipped." when applicable.
-- Migration `009_prospect_dedup.sql` adds `UNIQUE INDEX ON prospects(email, assigned_to) WHERE email IS NOT NULL AND campaign_id IS NULL` as a DB-level guard.
+**Prospect dedup on AI Context insert** (`app/ai-context/actions.ts`, `supabase/migrations/009_prospect_dedup.sql`):
+- Pre-flight SELECT before insert; skips rows matching `(email, assigned_to, campaign_id IS NULL)`.
+- Also filters blank rows (no name/email/company/linkedin) and deduplicates by `full_name` for email-less rows.
+- Upload banner shows "N added. M duplicates skipped."
+- Migration adds `UNIQUE INDEX ON prospects(email, assigned_to) WHERE email IS NOT NULL AND campaign_id IS NULL`.
 
-**Cleanup 1 — Removed manual campaign creation** (`app/campaigns/components/CampaignsClient.tsx`, deleted `NewCampaignModal.tsx`):
-- Removed the "+ New Campaign" button from the header and empty state.
-- Removed `showModal` state, `NewCampaignModal` import and render.
-- EmptyState now tells admins to use Events Hub to create campaigns.
-- `createCampaign` server action kept in `campaigns/actions.ts` (used by the internal flow).
+**Delete prospects** (`app/ai-context/actions.ts`, `app/ai-context/page.tsx`):
+- New `deleteAiContextProspects` server action (scoped to `assigned_to`, `campaign_id IS NULL`).
+- Per-row × button and "Delete" in the bulk action bar for cleaning up existing duplicates.
 
-**Cleanup 2 — Event theme in Campaigns list** (`app/campaigns/page.tsx`, `lib/types.ts`, `app/campaigns/components/CampaignsClient.tsx`):
-- `campaigns/page.tsx` collects distinct `event_id`s and fetches `events(id, brief, brief_status)` in the same parallel Promise.all as sent counts and assignments.
-- Extracts `brief.key_themes[0]` as `eventTheme: string | null` on each `CampaignWithStats`.
-- `EventGroup` now carries `eventTheme`; `EventGroupRow` and `CampaignRow` display it (muted `—` when absent or brief not yet scraped).
+**Remove manual campaign creation** (`app/campaigns/components/CampaignsClient.tsx`, deleted `NewCampaignModal.tsx`):
+- Removed "+ New Campaign" button, `showModal` state, modal import. EmptyState directs admins to Events Hub.
+
+**Event theme — user-entered field** (`app/events/actions.ts`, `app/events/components/EventsClient.tsx`, `app/events/[id]/components/EventDetailClient.tsx`, `app/campaigns/page.tsx`, `lib/types.ts`, `supabase/migrations/010_event_theme.sql`):
+- Added `theme text` column to `events` table (migration `010_event_theme.sql`).
+- Theme / Tagline field in Create Event modal and Event Info settings (editable, saves via `updateEvent`).
+- Campaigns list reads `events.theme` directly instead of `brief.key_themes[0]`.
+
+**AI Context research — prompt and parsing hardening** (`app/ai-context/actions.ts`):
+- Prompt now opens and closes with explicit JSON-only instructions; null-field instruction added.
+- JSON extraction uses `/\{[\s\S]*\}/` regex after stripping markdown fences — tolerates stray prose.
+- `raw` hoisted above `try` so catch can log first 500 chars of Claude's actual response.
+
+**Stuck-status fixes** (`app/ai-context/actions.ts`, `app/events/actions.ts`):
+- `runProspectIntelligence`: catch block's Supabase reset wrapped in its own try/catch — a network blip on the reset can no longer leave `intelligence_status = 'pending'` forever.
+- `runScrape`: `try` expanded to cover URL fetching, prompt build, and JSON parse (previously only wrapped Claude API call). Same inner try/catch pattern for the reset call. `console.error` logs event id and full error.
 
 ### Files touched
 ```
 modified: app/events/[id]/page.tsx
+modified: app/events/actions.ts
+modified: app/events/components/EventsClient.tsx
+modified: app/events/[id]/components/EventDetailClient.tsx
 modified: app/ai-context/actions.ts
 modified: app/ai-context/page.tsx
 modified: app/campaigns/components/CampaignsClient.tsx
 modified: app/campaigns/page.tsx
 modified: lib/types.ts
 new:      supabase/migrations/009_prospect_dedup.sql
+new:      supabase/migrations/010_event_theme.sql
 deleted:  app/campaigns/components/NewCampaignModal.tsx
 ```
 
 ### Current status
 
-All code committed (`ba270db`) and pushed. Vercel will deploy automatically. Zero TypeScript errors; all 13 routes compile.
+All code committed and deployed (`0f0b2e8` → `aaa412b`). Zero TypeScript errors; all 13 routes compile.
 
-**Mandatory manual step:**
-Run `supabase/migrations/009_prospect_dedup.sql` in Supabase Dashboard → SQL Editor:
+**Pending manual steps (Supabase Dashboard → SQL Editor):**
+
 ```sql
+-- 009: prospect dedup index
 CREATE UNIQUE INDEX IF NOT EXISTS prospects_email_assigned_dedup
   ON public.prospects (email, assigned_to)
   WHERE email IS NOT NULL AND campaign_id IS NULL;
+
+-- 010: event theme column
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS theme text;
+
+-- Unstick any prospects/events left pending from before the fix
+UPDATE public.prospects SET intelligence_status = 'failed', intelligence = null
+  WHERE intelligence_status = 'pending';
+UPDATE public.events SET brief_status = 'failed'
+  WHERE brief_status = 'pending';
 ```
 
 ---
 
 ## Next Recommended Task
-**Email sending via Graph API.** The plan is fully documented (2026-06-22 session). Blocked on Azure App Registration approval — implement once `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` are available in Vercel env vars.
+**Email sending via Graph API.** Plan fully documented (2026-06-22 session). Blocked on Azure App Registration approval — implement once `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` are in Vercel env vars.
