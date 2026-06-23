@@ -9,6 +9,7 @@ import {
   bulkGenerateContext,
   getProspectContextHistory,
   deleteContext,
+  deleteAiContextProspects,
   insertAiContextProspects,
   type AiContextProspect,
   type ProspectContext,
@@ -437,6 +438,13 @@ export default function AiContextPage() {
     }
   }
 
+  async function handleDeleteProspects(ids: string[]) {
+    setProspects(prev => prev.filter(p => !ids.includes(p.id)))
+    setSelectedIds(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s })
+    if (activeId && ids.includes(activeId)) setActiveId(null)
+    await deleteAiContextProspects(ids)
+  }
+
   // ── Selection helpers ─────────────────────────────────────────────────────
 
   function toggleSelected(id: string) {
@@ -558,8 +566,17 @@ export default function AiContextPage() {
                 backgroundColor: '#FFF8F7', borderColor: '#FECACA',
                 display: 'flex', flexDirection: 'column', gap: '10px',
               }}>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: '#E7534F' }}>
-                  {selectedIds.size} selected
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#E7534F' }}>
+                    {selectedIds.size} selected
+                  </span>
+                  <button
+                    onClick={() => handleDeleteProspects([...selectedIds])}
+                    disabled={bulkRunning || bulkGenerating}
+                    style={{ ...btn('danger', bulkRunning || bulkGenerating), padding: '4px 10px', fontSize: '12px' }}
+                  >
+                    Delete
+                  </button>
                 </div>
                 <button
                   onClick={handleBulkResearch}
@@ -664,7 +681,7 @@ export default function AiContextPage() {
                             {[p.title, p.company].filter(Boolean).join(' · ')}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                           <StatusBadge status={p.intelligence_status} />
                           <button
                             onClick={e => { e.stopPropagation(); handleResearch(p.id) }}
@@ -680,6 +697,19 @@ export default function AiContextPage() {
                             onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5E5E5' }}
                           >
                             {isResearching ? <Spinner size={11} /> : 'Research'}
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDeleteProspects([p.id]) }}
+                            title="Remove prospect"
+                            style={{
+                              padding: '4px 7px', border: '1px solid #E4E4E4', borderRadius: '2px',
+                              backgroundColor: '#FFFFFF', color: '#9CA3AF', fontSize: '13px', lineHeight: 1,
+                              cursor: 'pointer', flexShrink: 0,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#DC2626'; e.currentTarget.style.color = '#DC2626' }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E4E4E4'; e.currentTarget.style.color = '#9CA3AF' }}
+                          >
+                            ×
                           </button>
                         </div>
                       </div>

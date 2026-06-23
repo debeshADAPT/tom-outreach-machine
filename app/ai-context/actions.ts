@@ -316,10 +316,13 @@ export async function insertAiContextProspects(
   const userId = await requireAuth()
   const supabase = await createSupabaseServer()
 
-  // Deduplicate by email: check which rows with a non-null email already exist
-  const emailRows = rows.filter(r => r.email)
-  let existingEmails = new Set<string>()
+  // Drop rows with no meaningful content at all
+  const meaningful = rows.filter(r => r.full_name || r.email || r.company || r.linkedin_url)
+  const blanksDropped = rows.length - meaningful.length
 
+  // Dedup by email for rows that have one
+  const emailRows = meaningful.filter(r => r.email)
+  let existingEmails = new Set<string>()
   if (emailRows.length > 0) {
     const { data: existing } = await supabase
       .from('prospects')
@@ -327,12 +330,29 @@ export async function insertAiContextProspects(
       .in('email', emailRows.map(r => r.email!))
       .eq('assigned_to', userId)
       .is('campaign_id', null)
-
     existingEmails = new Set((existing ?? []).map(p => p.email as string))
   }
 
-  const rowsToInsert = rows.filter(r => !r.email || !existingEmails.has(r.email))
-  const skipped = rows.length - rowsToInsert.length
+  // Dedup by full_name for rows without an email
+  const nameOnlyRows = meaningful.filter(r => !r.email && r.full_name)
+  let existingNames = new Set<string>()
+  if (nameOnlyRows.length > 0) {
+    const { data: existing } = await supabase
+      .from('prospects')
+      .select('full_name')
+      .in('full_name', nameOnlyRows.map(r => r.full_name!))
+      .eq('assigned_to', userId)
+      .is('campaign_id', null)
+      .is('email', null)
+    existingNames = new Set((existing ?? []).map(p => (p.full_name as string).toLowerCase()))
+  }
+
+  const rowsToInsert = meaningful.filter(r => {
+    if (r.email) return !existingEmails.has(r.email)
+    if (r.full_name) return !existingNames.has(r.full_name.toLowerCase())
+    return true
+  })
+  const skipped = rows.length - blanksDropped - rowsToInsert.length
 
   if (rowsToInsert.length === 0) return { inserted: 0, skipped }
 
@@ -353,6 +373,23 @@ export async function insertAiContextProspects(
 
   if (error) return { inserted: 0, skipped, error: error.message }
   return { inserted: (data ?? []).length, skipped }
+}
+
+export async function deleteAiContextProspects(
+  ids: string[]
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireAuth()
+  const supabase = await createSupabaseServer()
+
+  const { error } = await supabase
+    .from('prospects')
+    .delete()
+    .in('id', ids)
+    .eq('assigned_to', userId)
+    .is('campaign_id', null)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }
 
 export async function getAiContextProspects(): Promise<AiContextProspect[]> {
