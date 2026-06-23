@@ -136,11 +136,17 @@ You must respond with ONLY a valid JSON object. No preamble, no explanation, no 
     console.error(`[runProspectIntelligence] failed for prospect ${prospectId} (${prospect.full_name ?? 'unknown'}):`, err)
     if (raw) console.error(`[runProspectIntelligence] raw Claude response (first 500 chars): ${raw.slice(0, 500)}`)
 
-    // Do not overwrite existing intelligence on failure
-    await supabase
-      .from('prospects')
-      .update({ intelligence_status: 'failed' })
-      .eq('id', prospectId)
+    // Guarantee the status is always reset — never left as pending.
+    // Wrapped in its own try/catch so a Supabase failure here can't
+    // prevent us from returning and leave the prospect permanently stuck.
+    try {
+      await supabase
+        .from('prospects')
+        .update({ intelligence_status: 'failed' })
+        .eq('id', prospectId)
+    } catch (resetErr) {
+      console.error(`[runProspectIntelligence] failed to reset status for prospect ${prospectId}:`, resetErr)
+    }
 
     return { ok: false, error: message }
   }
