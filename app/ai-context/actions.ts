@@ -68,13 +68,15 @@ export async function runProspectIntelligence(
     .update({ intelligence_status: 'pending' })
     .eq('id', prospectId)
 
+  let raw = ''
   try {
     const linkedinLine = (prospect as { linkedin_url?: string | null }).linkedin_url
       ? `LinkedIn Profile: ${(prospect as { linkedin_url?: string | null }).linkedin_url}\nSearch this URL first — treat it as the primary identifier and ground truth for this person.\n`
       : ''
 
-    const userMessage = `Research this specific individual and return structured intelligence as raw JSON only.
-No preamble, no markdown fences, just the JSON object.
+    const userMessage = `You must respond with ONLY a valid JSON object. No preamble, no explanation, no markdown, no prose before or after the JSON.
+
+Research this specific individual:
 
 ${linkedinLine}Name: ${prospect.full_name ?? 'Unknown'}
 Job Title: ${prospect.title ?? 'Unknown'}
@@ -82,8 +84,6 @@ Company: ${prospect.company ?? 'Unknown'}
 ${prospect.email ? `Email: ${prospect.email}` : ''}
 
 Use all identifiers above (LinkedIn URL if provided, name, company, job title) together to confidently identify the correct individual. Common names require careful disambiguation — always confirm the company and role match.
-
-IMPORTANT: If you cannot confidently identify this specific individual, say so clearly in each field rather than describing multiple people with the same name or making assumptions about who they are.
 
 Return this exact JSON structure with no extra keys:
 {
@@ -97,7 +97,9 @@ Return this exact JSON structure with no extra keys:
   "confidence_score": 5
 }
 
-confidence_score must be an integer 1–5: 5 = uniquely identified with high certainty; 3 = reasonably confident but some ambiguity; 1 = could not confidently identify this specific individual.`
+confidence_score must be an integer 1–5: 5 = uniquely identified with high certainty; 3 = reasonably confident but some ambiguity; 1 = could not confidently identify this specific individual.
+If you cannot find information for a field, use null for that field. Never explain why — just return the JSON.
+You must respond with ONLY a valid JSON object. No preamble, no explanation, no markdown, no prose before or after the JSON.`
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -112,10 +114,12 @@ confidence_score must be an integer 1–5: 5 = uniquely identified with high cer
       throw new Error('No text response from Claude')
     }
 
-    const raw = textBlock.text.trim()
-    // Strip any accidental markdown fences
-    const jsonStr = raw.startsWith('```') ? raw.replace(/^```[a-z]*\n?/i, '').replace(/```$/, '').trim() : raw
-    const intelligence: ProspectIntelligence = JSON.parse(jsonStr)
+    raw = textBlock.text.trim()
+    // Strip markdown fences, then extract the first {...} block as a fallback
+    const stripped = raw.startsWith('```') ? raw.replace(/^```[a-z]*\n?/i, '').replace(/```$/, '').trim() : raw
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error(`No JSON object found in Claude response. Raw: ${raw.slice(0, 200)}`)
+    const intelligence: ProspectIntelligence = JSON.parse(jsonMatch[0])
 
     await supabase
       .from('prospects')
@@ -130,6 +134,7 @@ confidence_score must be an integer 1–5: 5 = uniquely identified with high cer
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[runProspectIntelligence] failed for prospect ${prospectId} (${prospect.full_name ?? 'unknown'}):`, err)
+    if (raw) console.error(`[runProspectIntelligence] raw Claude response (first 500 chars): ${raw.slice(0, 500)}`)
 
     // Do not overwrite existing intelligence on failure
     await supabase
