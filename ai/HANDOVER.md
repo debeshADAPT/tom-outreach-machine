@@ -606,5 +606,52 @@ UPDATE public.events SET brief_status = 'failed'
 
 ---
 
+## Session: 2026-06-25 — Context review (no code changes)
+
+### What changed
+
+Session was a context catch-up only. No code written.
+
+### Files touched
+```
+none
+```
+
+### Current status
+
+Codebase is clean. Last committed: `aaa412b` (2026-06-23). Deployed on Vercel.
+
+**Pending manual steps** from 2026-06-23 session — confirm whether these have been run in Supabase Dashboard:
+```sql
+-- 009: prospect dedup index
+CREATE UNIQUE INDEX IF NOT EXISTS prospects_email_assigned_dedup
+  ON public.prospects (email, assigned_to)
+  WHERE email IS NOT NULL AND campaign_id IS NULL;
+
+-- 010: event theme column
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS theme text;
+
+-- Unstick any rows left pending
+UPDATE public.prospects SET intelligence_status = 'failed', intelligence = null
+  WHERE intelligence_status = 'pending';
+UPDATE public.events SET brief_status = 'failed'
+  WHERE brief_status = 'pending';
+```
+
+---
+
+## Unresolved Issues
+- **Email sending not implemented** — Graph API plan ready (2026-06-22 session); blocked on Azure App Registration approval (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` env vars needed).
+- **AI scoring is mocked** — match scores and AIInsightsTab data are hardcoded. Salesforce integration planned.
+- **Contacts / Email Templates / Connectors** nav items are disabled stubs.
+- **`proxy.ts`** — In Next.js 16, this IS the middleware (active on every request, checks `auth-token` cookie). Supplements server-component auth checks.
+- **`lib/supabase.js`** — legacy unused client, safe to delete.
+- **`startProspectSequence` / `bulkStartSequences` / `saveSequenceDelays`** — actions exist, no UI trigger.
+- **Events Hub — fire-and-forget scrape on create** — `createEvent` detaches `runScrape()`. Reliable on Fluid Compute; Resync Brief is synchronous fallback.
+- **Events Hub — regex-based HTML extraction** — replace with `node-html-parser` if extraction quality degrades.
+- **User Management — no role edit** — role can only be changed via direct SQL.
+
+---
+
 ## Next Recommended Task
 **Email sending via Graph API.** Plan fully documented (2026-06-22 session). Blocked on Azure App Registration approval — implement once `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` are in Vercel env vars.
