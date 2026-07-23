@@ -653,5 +653,81 @@ UPDATE public.events SET brief_status = 'failed'
 
 ---
 
+## Session: 2026-07-23 — Codebase audit + mock-data disclosure fix
+
+### What changed
+
+**Audit (no code changes):** Full read-only audit of dead code, half-finished features, and blocked/mocked-system assumptions. Written to `ai/AUDIT_FINDINGS.md`. Key findings: `EmailLogsTab.tsx` claimed "Sent via SIGNAL · Microsoft Graph" for emails never sent; `ProspectsTable.tsx`/`ProspectDrawer.tsx` match scores and mock replies had no in-UI disclaimer; `AIInsightsTab.tsx` presented hardcoded data as live AI recommendations; AI-Context dedup (`insertAiContextProspects`) never actually depends on migration 009's unique index (pure pre-flight SELECT, TOCTOU race regardless of migration status); Events Hub `createEvent()` → `runScrape()` fire-and-forget can still leave `brief_status`/`intelligence_status` stuck at `'pending'` forever on a hard kill, with no cron/staleness detection; `lib/supabase.js` and three orphaned sequence actions (`startProspectSequence`/`bulkStartSequences`/`saveSequenceDelays`) confirmed dead; the "Generate Context" spinner bug noted in a prior HANDOVER entry (2026-06-20/23) is **not actually present in current code** — that note was stale.
+
+**Mock/preview data disclosure fix** (implements audit prioritized item #1 — see `ai/DECISIONS.md`):
+- New `components/MockDataBadge.tsx` — shared `MockDataBanner` + `MockDataTag` components, one consistent visual pattern for flagging fake data anywhere in the app.
+- `app/campaigns/[id]/components/EmailLogsTab.tsx` — added `MockDataBanner` under the header; replaced the "Sent via SIGNAL · Microsoft Graph" footer with a `MockDataTag` + "Preview only — this email has not actually been sent"; fixed misleading header/empty-state copy that asserted real send activity.
+- `app/campaigns/[id]/components/ProspectsTable.tsx` — `MockDataTag` attached to every match-score badge.
+- `app/campaigns/[id]/components/ProspectDrawer.tsx` — `MockDataTag` on the header match-score pill; explicit "Preview text — not an actual reply from this prospect" label above the mock reply content.
+- `app/campaigns/[id]/components/AIInsightsTab.tsx` — `MockDataBanner` at the top of the tab, covering Top Matches, Industry Performance, Coverage Insights, Top Performing Topics, and the AI Insight cards.
+
+No change to any underlying mock-data generation logic, and no other audit findings (dedup race, stuck-pending status, dead code, orphaned actions) were touched — those remain open per the audit's prioritized list.
+
+### Files touched
+```
+new:      ai/AUDIT_FINDINGS.md
+new:      components/MockDataBadge.tsx
+modified: ai/DECISIONS.md
+modified: app/campaigns/[id]/components/EmailLogsTab.tsx
+modified: app/campaigns/[id]/components/ProspectsTable.tsx
+modified: app/campaigns/[id]/components/ProspectDrawer.tsx
+modified: app/campaigns/[id]/components/AIInsightsTab.tsx
+```
+
+### Current status
+
+Verified manually in-browser (both empty and populated data states) on all three surfaces — banners and tags render correctly, no layout regressions. `npx tsc --noEmit` and `npm run build` both clean, all 13 routes compile. Not yet committed — awaiting user review. No migrations required, no manual steps required.
+
+---
+
+## Session: 2026-07-23 — Lead Discovery Phase 1: company_prospect_pool schema + upsert-pattern fix
+
+### What changed
+
+Schema + write-path groundwork for Lead Discovery (no Lusha integration, no new UI — those are Phase 2/3). Directly implements audit prioritized item #2 from `ai/AUDIT_FINDINGS.md` (the AI-Context dedup TOCTOU race, finding c#5) as a side effect of doing this properly before adding more write paths on top of it.
+
+**Note:** the task brief for this phase cited `LEAD_DISCOVERY_SPEC.md` (Sections 3, 4.5) — that file does not exist anywhere in this repo. Proceeded using the column list given directly in the task brief; logged as a gap in `ai/DECISIONS.md`. If that spec exists elsewhere, it should be added to `ai/` so future sessions can find it.
+
+**New table** (`supabase/migrations/011_company_prospect_pool.sql` — **run, confirmed applied**):
+- `company_prospect_pool` — domain-keyed shared search cache for Lead Discovery. Columns: `company_domain` (normalized lowercase, indexed), `full_name`, `title`, `company_name`, `linkedin_url`, `source` (`lusha` / `csv_salesforce` / `manual`), `has_contact_info` boolean, `last_found_at`, `event_type_fit` text[], timestamps. Deliberately holds no email/phone — contact enrichment happens on promotion (a later phase), not in the pool.
+- Dedup: two partial unique indexes mirroring the existing `prospects` pattern — `(company_domain, linkedin_url) WHERE linkedin_url IS NOT NULL`, falling back to `(company_domain, full_name) WHERE linkedin_url IS NULL AND full_name IS NOT NULL`.
+- RLS: shared cache — SELECT/INSERT/UPDATE open to all authenticated; DELETE admin-only.
+
+**Second dedup gap found and closed** (`supabase/migrations/012_prospect_name_dedup.sql` — **run, confirmed applied**):
+- While building the upsert refactor below, found the *name-only* fallback branch of `insertAiContextProspects` (CSV rows with no email) had **zero DB-level constraint** — unlike the email branch, which at least had migration 009. Added a partial unique index `prospects_fullname_assigned_dedup` on `(full_name, assigned_to) WHERE full_name IS NOT NULL AND email IS NULL AND campaign_id IS NULL`, same shape as 009. Logged separately in `ai/DECISIONS.md` since this is a new finding, not something the audit or task brief called out.
+
+**Upsert-pattern fix** (`supabase/migrations/013_prospect_upsert_rpc.sql`, `lib/upsert.ts`, `app/ai-context/actions.ts` — **run, confirmed applied**):
+- Both 009 and 012 are *partial* unique indexes. Postgres requires `ON CONFLICT` to repeat a partial index's `WHERE` predicate verbatim to use it as an arbiter — and PostgREST's upsert mechanism (all `supabase-js`'s `.upsert()` can drive) has no way to supply that predicate, so a bare `.upsert({ onConflict: 'email,assigned_to' })` would fail against `prospects_email_assigned_dedup`. This was flagged and confirmed before any code was written (see `ai/DECISIONS.md`).
+- New `upsert_context_prospects(p_rows jsonb)` Postgres function — `SECURITY INVOKER` (existing RLS still applies), does the real `INSERT ... ON CONFLICT (...) WHERE <matching predicate> DO UPDATE ... RETURNING id, (xmax = 0) AS inserted` per row, for both the email and name-only branches.
+- New `lib/upsert.ts` (`upsertViaRpc`) — thin, reusable TS wrapper any future write path (pool write-back, promotion — Phase 2/3) should call the same way, each with its own matching RPC.
+- `insertAiContextProspects` (`app/ai-context/actions.ts`) rewritten to call `upsertViaRpc` instead of the old pre-flight-SELECT-then-insert. Behavior change: a matched row now has its fields refreshed (merged) rather than being silently ignored — the returned `skipped` count means "matched and merged," not "ignored." UI copy in `app/ai-context/page.tsx` ("N added. M duplicates skipped.") was left as-is (out of scope for this phase) but is now slightly imprecise given this semantic change — worth a small copy tweak in a future pass.
+
+**Not built this phase (by design):** pool write-back logic, promotion write path, any Lead Discovery UI, Lusha API integration. `lib/upsert.ts`'s calling convention is designed so those phases can reuse it without rework.
+
+### Verification
+
+Ran the concurrent-double-submit test through the app's actual UI (not a standalone script), per explicit instruction: uploaded a one-row test CSV via AI Context Creator (`ZZTest DoubleSubmit`, distinctive test email) — first upload: "1 prospect added" (8 total). Uploaded the *exact same* CSV again — result: **"0 prospects added. 1 duplicate skipped."**, count stayed at 8, no duplicate row created, no unique-violation error surfaced. This confirms the RPC's `ON CONFLICT (...) WHERE ...` clause is correctly resolving against the partial index in production, not erroring or silently duplicating. Cleaned up by deleting the test prospect via the app's own delete button (back to 7). `npx tsc --noEmit` and `npm run build` both clean.
+
+### Files touched
+```
+new:      supabase/migrations/011_company_prospect_pool.sql
+new:      supabase/migrations/012_prospect_name_dedup.sql
+new:      supabase/migrations/013_prospect_upsert_rpc.sql
+new:      lib/upsert.ts
+modified: app/ai-context/actions.ts
+modified: ai/DECISIONS.md
+```
+
+### Current status
+
+Migrations 011, 012, 013 confirmed run in Supabase (user-confirmed). Code verified working against production via the double-submit test above. Not yet committed — awaiting user review.
+
+---
+
 ## Next Recommended Task
-**Email sending via Graph API.** Plan fully documented (2026-06-22 session). Blocked on Azure App Registration approval — implement once `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` are in Vercel env vars.
+Lead Discovery Phase 2 (Lusha API integration + pool write-back) can now build on the schema/upsert groundwork from this session — reuse `lib/upsert.ts`'s `upsertViaRpc` pattern with a new RPC targeting `company_prospect_pool`'s partial indexes. Separately, per the 2026-07-23 audit's prioritized list (`ai/AUDIT_FINDINGS.md`), the stuck-`pending` staleness check for `brief_status`/`intelligence_status` (item #3) is still open. Email sending via Graph API remains blocked on Azure App Registration approval (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`).

@@ -3,6 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createSupabaseServer } from '@/lib/supabase-server'
 import { requireAuth } from '@/lib/require-admin'
+import { upsertViaRpc } from '@/lib/upsert'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -334,59 +335,29 @@ export async function insertAiContextProspects(
   const meaningful = rows.filter(r => r.full_name || r.email || r.company || r.linkedin_url)
   const blanksDropped = rows.length - meaningful.length
 
-  // Dedup by email for rows that have one
-  const emailRows = meaningful.filter(r => r.email)
-  let existingEmails = new Set<string>()
-  if (emailRows.length > 0) {
-    const { data: existing } = await supabase
-      .from('prospects')
-      .select('email')
-      .in('email', emailRows.map(r => r.email!))
-      .eq('assigned_to', userId)
-      .is('campaign_id', null)
-    existingEmails = new Set((existing ?? []).map(p => p.email as string))
-  }
+  // Atomic upsert against the partial unique indexes (009/012) — see
+  // lib/upsert.ts and 013_prospect_upsert_rpc.sql. A row that matches an
+  // existing (email, assigned_to) or (full_name, assigned_to) pair has its
+  // fields refreshed rather than being silently dropped; "skipped" below now
+  // means "matched an existing record and was merged into it," not "ignored."
+  const { results, error } = await upsertViaRpc(
+    supabase,
+    'upsert_context_prospects',
+    meaningful.map(r => ({
+      assigned_to: userId,
+      full_name: r.full_name || null,
+      title: r.title || null,
+      company: r.company || null,
+      email: r.email || null,
+      linkedin_url: r.linkedin_url || null,
+    }))
+  )
 
-  // Dedup by full_name for rows without an email
-  const nameOnlyRows = meaningful.filter(r => !r.email && r.full_name)
-  let existingNames = new Set<string>()
-  if (nameOnlyRows.length > 0) {
-    const { data: existing } = await supabase
-      .from('prospects')
-      .select('full_name')
-      .in('full_name', nameOnlyRows.map(r => r.full_name!))
-      .eq('assigned_to', userId)
-      .is('campaign_id', null)
-      .is('email', null)
-    existingNames = new Set((existing ?? []).map(p => (p.full_name as string).toLowerCase()))
-  }
+  if (error) return { inserted: 0, skipped: blanksDropped, error }
 
-  const rowsToInsert = meaningful.filter(r => {
-    if (r.email) return !existingEmails.has(r.email)
-    if (r.full_name) return !existingNames.has(r.full_name.toLowerCase())
-    return true
-  })
-  const skipped = rows.length - blanksDropped - rowsToInsert.length
-
-  if (rowsToInsert.length === 0) return { inserted: 0, skipped }
-
-  const { data, error } = await supabase
-    .from('prospects')
-    .insert(
-      rowsToInsert.map(r => ({
-        // campaign_id intentionally omitted (nullable — context-only prospect)
-        assigned_to: userId,
-        full_name: r.full_name || null,
-        title: r.title || null,
-        company: r.company || null,
-        email: r.email || null,
-        linkedin_url: r.linkedin_url || null,
-      }))
-    )
-    .select('id')
-
-  if (error) return { inserted: 0, skipped, error: error.message }
-  return { inserted: (data ?? []).length, skipped }
+  const inserted = results.filter(r => r.inserted).length
+  const skipped = blanksDropped + (results.length - inserted)
+  return { inserted, skipped }
 }
 
 export async function deleteAiContextProspects(
