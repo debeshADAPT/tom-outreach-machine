@@ -36,3 +36,13 @@
 **Why this is logged separately from the main upsert-pattern decision above:** this is a genuine, previously-unidentified gap (not called out in `ai/AUDIT_FINDINGS.md` c#5, which only discussed the email path) discovered as a side effect of this task, not something the task brief asked for directly. Worth its own record so it doesn't get miscategorized as routine cleanup.
 
 **How to apply:** when auditing or fixing a dedup path, check *every* branch of the dedup logic for a matching DB constraint, not just the one already known to have (or lack) one — a multi-branch dedup function can have branches in different states of correctness.
+
+---
+
+## 2026-07-23 — Lead Discovery spec added to repo; staleness window finalized at 60 days
+
+**Decision:** `ai/LEAD_DISCOVERY_SPEC.md` has been added to the repo, closing the gap noted during Phase 1 (both decision entries above proceeded without this file present — it existed only as a task-brief excerpt, not a committed document reps and future sessions could reference directly). The file was found on the user's local Desktop, not previously in the repo; content was written in verbatim except for two staleness-window mentions (Section 3, Section 6), which were updated per the note below.
+
+**Staleness window finalized at 60 days** (product decision, confirmed 2026-07-23) — this was an open item in the spec ("suggest 60-90 days, confirm before build") that is now resolved and no longer blocks Phase 2. Sections 3, 6, and 7 of `ai/LEAD_DISCOVERY_SPEC.md` reflect the finalized number; the file's other open items (Lusha server-side credential provisioning, prospect dedup migration status — already confirmed run per the two entries above) remain as documented there.
+
+**How to apply:** treat `ai/LEAD_DISCOVERY_SPEC.md` as the source of truth for Lead Discovery Phases 2-4 (Lusha integration, Lead Discovery UI, CSV reconciliation) — its matching hierarchy (Section 4.1), reconciliation logic (Section 4.3-4.4), and non-goals (Section 5) should be read directly from that file rather than re-derived from task-brief excerpts, which is exactly what caused this gap in the first place.
