@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowser } from '@/lib/supabase-browser'
-import type { Event, EventChangelogEntry, EventBrief } from '../../actions'
+import type { Event, EventChangelogEntry, EventBrief, TargetCompany } from '../../actions'
 import {
   resyncEventBrief,
   updateEvent,
   assignRepToEvent,
   unassignRepFromEvent,
 } from '../../actions'
+import TargetCompaniesSection from './TargetCompaniesSection'
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -346,9 +347,10 @@ function ChangelogRow({ entry }: { entry: EventChangelogEntry }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function EventDetailClient({ event: initialEvent, changelog: initialChangelog, isAdmin }: {
+export default function EventDetailClient({ event: initialEvent, changelog: initialChangelog, targetCompanies, isAdmin }: {
   event: Event
   changelog: EventChangelogEntry[]
+  targetCompanies: TargetCompany[]
   isAdmin: boolean
 }) {
   const router = useRouter()
@@ -681,6 +683,14 @@ export default function EventDetailClient({ event: initialEvent, changelog: init
               )}
             </div>
           )}
+
+          {/* ── Target Companies ─────────────────────────────────────────── */}
+          <TargetCompaniesSection
+            eventId={initialEvent.id}
+            companies={targetCompanies}
+            eventReps={assignedReps}
+            isAdmin={isAdmin}
+          />
 
           {/* ── Changelog ───────────────────────────────────────────────── */}
           <div style={card}>

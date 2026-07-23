@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createSupabaseServer } from '@/lib/supabase-server'
-import type { Event, EventChangelogEntry, EventRep } from '../actions'
+import type { Event, EventChangelogEntry, EventRep, TargetCompany } from '../actions'
 import EventDetailClient from './components/EventDetailClient'
 
 interface Props {
@@ -30,8 +30,8 @@ export default async function EventDetailPage({ params }: Props) {
 
   if (!event) notFound()
 
-  // Fetch changelog and assignments in parallel
-  const [{ data: changelogRaw }, { data: assignments }] = await Promise.all([
+  // Fetch changelog, assignments, and target companies in parallel
+  const [{ data: changelogRaw }, { data: assignments }, { data: targetCompaniesRaw }] = await Promise.all([
     supabase
       .from('event_changelog')
       .select('*')
@@ -41,6 +41,11 @@ export default async function EventDetailPage({ params }: Props) {
       .from('campaign_assignments')
       .select('event_id, user_id, campaign_id')
       .eq('event_id', id),
+    supabase
+      .from('event_target_companies')
+      .select('id, event_id, company_name, company_domain, created_at')
+      .eq('event_id', id)
+      .order('company_name', { ascending: true }),
   ])
 
   // Two-step join for rep display names (PostgREST can't traverse auth.users → profiles)
@@ -74,7 +79,30 @@ export default async function EventDetailPage({ params }: Props) {
     profiles: c.changed_by ? { display_name: changelogProfilesMap[c.changed_by] ?? null } : undefined,
   }))
 
+  // Target companies' owning reps (many-to-many junction)
+  const targetCompanyIds = (targetCompaniesRaw ?? []).map((c: { id: string }) => c.id)
+  const { data: companyReps } = targetCompanyIds.length > 0
+    ? await supabase.from('event_target_company_reps').select('target_company_id, user_id').in('target_company_id', targetCompanyIds)
+    : { data: [] }
+  const ownersByCompany = new Map<string, string[]>()
+  for (const r of companyReps ?? []) {
+    const list = ownersByCompany.get(r.target_company_id) ?? []
+    list.push(r.user_id)
+    ownersByCompany.set(r.target_company_id, list)
+  }
+  const targetCompanies: TargetCompany[] = (targetCompaniesRaw ?? []).map((c: Omit<TargetCompany, 'ownerRepIds'>) => ({
+    ...c,
+    ownerRepIds: ownersByCompany.get(c.id) ?? [],
+  }))
+
   const fullEvent: Event = { ...(event as Event), assignedReps }
 
-  return <EventDetailClient event={fullEvent} changelog={changelog} isAdmin={isAdmin} />
+  return (
+    <EventDetailClient
+      event={fullEvent}
+      changelog={changelog}
+      targetCompanies={targetCompanies}
+      isAdmin={isAdmin}
+    />
+  )
 }

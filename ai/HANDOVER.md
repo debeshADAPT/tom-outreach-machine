@@ -729,5 +729,87 @@ Migrations 011, 012, 013 confirmed run in Supabase (user-confirmed). Code verifi
 
 ---
 
+## Session: 2026-07-23 — Lead Discovery Phase 2: company_prospect_pool write-back (partial — Lusha client still blocked)
+
+### What changed
+
+`ai/LEAD_DISCOVERY_SPEC.md` was added to the repo (separate task) between Phase 1 and this session — see its own decisions log entry. Before starting Phase 2 build, confirmed with the user: (1) Lusha server-side credentials are provisioned (user will add the real env var to `.env.local` when needed — not added yet, nothing consumes it), (2) **the spec's Section 6 Lusha response field list is confirmed wrong** — Product Decisions found the real response is nested (`jobTitle.title`, `company.name`, `company.domain`, `socialLinks.linkedin`) and Search Contacts never returns `email` at all (Enrich-only). The user is correcting the spec; **`lib/lusha-client.ts` must not be built until that correction lands** — building against a confirmed-wrong contract guarantees rework. (3) Phase 2 scope confirmed as pool write-back only, testable against manually-specified input — no target-company-list upload (that became a separate task, see next session below).
+
+This session built only the half of Phase 2 that doesn't depend on Lusha's exact response shape:
+
+**New migration** (`supabase/migrations/014_company_prospect_pool_upsert_rpc.sql` — **run, confirmed applied**):
+- `upsert_company_prospect_pool(p_rows jsonb)` — same shape as `013_prospect_upsert_rpc.sql`: `SECURITY INVOKER`, real `INSERT ... ON CONFLICT (...) WHERE ... DO UPDATE ... RETURNING id, (xmax = 0) AS inserted` per row, targeting `company_prospect_pool`'s two partial indexes from `011`. Refreshes `last_found_at` to `now()` on every successful write (insert or update) — the field the 60-day staleness check reads.
+
+**New TS wrapper** (`lib/prospect-pool.ts` — new file):
+- `writeToProspectPool(supabase, rows)` — thin call to `upsertViaRpc(supabase, 'upsert_company_prospect_pool', rows)`. This is the exact row shape a future `lib/lusha-client.ts` needs to produce once unblocked — no rework needed here regardless of the corrected field mapping.
+- `lib/upsert.ts`'s `upsertViaRpc` was widened from `Record<string, unknown>[]` to a generic `<T extends object>[]` so callers like `ProspectPoolRow` (a plain interface, no index signature) can pass rows without a cast — a small, backward-compatible type fix, not a behavior change.
+
+**Not built this session:** `lib/lusha-client.ts` itself (HTTP call, auth, response parsing) — still blocked. `LUSHA_API_KEY` env var not added — nothing consumes it yet.
+
+### Files touched
+```
+new:      supabase/migrations/014_company_prospect_pool_upsert_rpc.sql
+new:      lib/prospect-pool.ts
+modified: lib/upsert.ts
+```
+
+### Current status — STILL OPEN, carried into next session
+
+- **Migration 014 is confirmed run** (verified via direct query against Supabase — `upsert_company_prospect_pool` exists). Correction: an earlier version of this note said it hadn't been run yet; that was inaccurate — it had been, just not communicated at the time.
+- **The `upsert_company_prospect_pool` RPC had not yet been exercised end-to-end** as of this session — no double-write verification test had been run against it (unlike 013, which was verified through the app's actual UI). Re-flagged in the next session below; closed out in the session after that (see further down).
+- `npx tsc --noEmit` and `npm run build` both clean as of this session.
+
+---
+
+## Session: 2026-07-23 — Lead Discovery Phase 3, part 1: manager target-company-list upload
+
+### What changed
+
+Manager (admin)-facing upload of an event's target company list (~300 companies typical), tagged with which rep(s) own each company — per `ai/LEAD_DISCOVERY_SPEC.md` Section 2, steps 2-4. Does not depend on Lusha — confirmed the spec's Sections 3/6 have **still not been corrected** as of this session (checked directly, not assumed), so `lib/lusha-client.ts` remains unbuilt.
+
+**Scoping decision:** scoped to `event_id`, not an individual `campaign_id` — confirmed with the user before building. In this codebase a "campaign" is rep-scoped (`assignRepToEvent()` creates one `campaigns` row per rep per event), so a per-campaign list would mean re-uploading the same company list once per rep on a shared event. One list per event, split by rep ownership, matches how everything else Lead-Discovery-adjacent is scoped (`prospect_contexts.event_id`) and puts the UI in Events Hub alongside Assigned Reps / Brief / Changelog. "Manager" maps to this app's existing `admin` role — no new role introduced.
+
+**New migration** (`supabase/migrations/015_event_target_companies.sql` — **written, NOT yet run**):
+- `event_target_companies` — `event_id` FK, `company_name`, `company_domain` (CHECK `= lower(company_domain)`, matching `011`'s normalization exactly so the two systems key consistently later), `created_by`, `created_at`. `UNIQUE (event_id, company_domain)` — a **plain** (non-partial) unique index, so a normal `supabase-js` `.upsert()` works fine here; no RPC needed (the partial-index-needs-an-RPC pattern in `ai/DECISIONS.md` doesn't apply to this table).
+- `event_target_company_reps` — many-to-many junction (`target_company_id`, `user_id`), since a company can have more than one owning rep per the spec's "rep(s)".
+- RLS: SELECT open to all authenticated; INSERT/UPDATE/DELETE admin-only, same pattern as `campaign_assignments`.
+
+**Server actions** (`app/events/actions.ts`):
+- New `TargetCompany` type.
+- `getTargetCompanies(eventId)`, `uploadTargetCompanies(eventId, rows)` (admin-only, plain `.upsert()` on `(event_id, company_domain)`), `setCompanyReps(targetCompanyId, userIds)` (admin-only, replace-all junction rows), `removeTargetCompany(targetCompanyId)` (admin-only).
+
+**UI** (`app/events/[id]/components/TargetCompaniesSection.tsx` — new; wired into `EventDetailClient.tsx` between Assigned Reps and Changelog; `app/events/[id]/page.tsx` fetches companies + owner-rep-ids server-side, same two-step-join style already used for rep names):
+- CSV upload + column-mapping screen, following `app/ai-context/page.tsx`'s mapping-screen pattern (not the older fixed-header `UploadCSV.tsx` pattern) — arbitrary CSV, map Company Name / Company Domain columns via dropdown, "Confirm & Import".
+- Per-company inline rep-tagging via toggle pills, scoped to the event's already-assigned reps only (not all staff).
+- Admin-only — the whole section renders `null` for non-admins, same convention as the existing Assigned Reps section (hidden, not read-only, until a rep-facing consumer of this data exists in a later phase).
+
+**Explicitly not built** (per task brief): Lusha calls, "Find new leads" flow, already-in-list/new split, promote/discard — all future work once `lib/lusha-client.ts` is unblocked.
+
+### Files touched
+```
+new:      supabase/migrations/015_event_target_companies.sql
+new:      app/events/[id]/components/TargetCompaniesSection.tsx
+modified: app/events/actions.ts
+modified: app/events/[id]/components/EventDetailClient.tsx
+modified: app/events/[id]/page.tsx
+modified: ai/DECISIONS.md
+```
+
+### Current status
+
+`npx tsc --noEmit` and `npm run build` both clean. Migration 015 confirmed run. Not yet committed.
+
+**Correction to the note above:** migration 014 was in fact confirmed run before this session started (verified via direct query — `upsert_company_prospect_pool` exists in Supabase); the "NOT yet run" note two sessions back was inaccurate, just not communicated at the time.
+
+**Both outstanding verification passes are now complete:**
+
+1. **014 double-write test (`upsert_company_prospect_pool`)** — ran via a one-off script (no UI exists for this yet, consistent with the approved plan): called the RPC twice with an identical test row (same `company_domain` + `linkedin_url`). First call `inserted: true`; second call, same `id`, `inserted: false`; exactly 1 matching row in the table afterward. **PASS.** Test row deleted, script removed.
+2. **015 upload/tag/remove pass** — tested live in-browser as admin on event CIO30 (3 assigned reps): uploaded a 3-row test CSV via the column-mapping screen (auto-detected "Company Name"/"Domain" correctly), got "3 companies imported"; tagged two reps onto one company via the toggle pills, **reloaded the page**, confirmed both tags persisted (not just optimistic client state); removed one company via ×, confirmed count dropped to 2; removed the remaining two, confirmed empty state returned. **PASS.** All test data removed via the UI's own controls, nothing left in the database.
+
+**Still genuinely open (unrelated to either migration):**
+- **`lib/lusha-client.ts` still blocked** — `ai/LEAD_DISCOVERY_SPEC.md` Sections 3/6 have not been corrected in the repo as of this session (checked directly: still shows the old `id/linkedinUrl/email/firstName/lastName/companyName/companyDomain/has/canReveal` field list). Do not build against it.
+
+---
+
 ## Next Recommended Task
-Lead Discovery Phase 2 (Lusha API integration + pool write-back) can now build on the schema/upsert groundwork from this session — reuse `lib/upsert.ts`'s `upsertViaRpc` pattern with a new RPC targeting `company_prospect_pool`'s partial indexes. Separately, per the 2026-07-23 audit's prioritized list (`ai/AUDIT_FINDINGS.md`), the stuck-`pending` staleness check for `brief_status`/`intelligence_status` (item #3) is still open. Email sending via Graph API remains blocked on Azure App Registration approval (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`).
+Both 014 and 015 are now built, migrated, and verified end-to-end — Lead Discovery's write-back foundation (pool) and target-company scoping are solid. Lead Discovery Phase 2 proper (`lib/lusha-client.ts`) remains blocked until the corrected spec (Sections 3/6) is shared — check directly before assuming it's resolved. Once unblocked, Phase 3's rep-facing "Find new leads" flow (already-in-list/new split, promote/discard) can build on both 014's pool and 015's target-company/rep-ownership data together. Separately, per the 2026-07-23 audit's prioritized list (`ai/AUDIT_FINDINGS.md`), the stuck-`pending` staleness check for `brief_status`/`intelligence_status` (item #3) is still open. Email sending via Graph API remains blocked on Azure App Registration approval (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`).

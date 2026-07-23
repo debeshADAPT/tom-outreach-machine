@@ -46,3 +46,23 @@
 **Staleness window finalized at 60 days** (product decision, confirmed 2026-07-23) — this was an open item in the spec ("suggest 60-90 days, confirm before build") that is now resolved and no longer blocks Phase 2. Sections 3, 6, and 7 of `ai/LEAD_DISCOVERY_SPEC.md` reflect the finalized number; the file's other open items (Lusha server-side credential provisioning, prospect dedup migration status — already confirmed run per the two entries above) remain as documented there.
 
 **How to apply:** treat `ai/LEAD_DISCOVERY_SPEC.md` as the source of truth for Lead Discovery Phases 2-4 (Lusha integration, Lead Discovery UI, CSV reconciliation) — its matching hierarchy (Section 4.1), reconciliation logic (Section 4.3-4.4), and non-goals (Section 5) should be read directly from that file rather than re-derived from task-brief excerpts, which is exactly what caused this gap in the first place.
+
+---
+
+## 2026-07-23 — Lusha's real Search Contacts response shape does not match the spec's confirmed field list — `lib/lusha-client.ts` stays blocked
+
+**Decision/finding:** Before starting Phase 2 build, confirmed with the user that `ai/LEAD_DISCOVERY_SPEC.md` Section 6's "confirmed via Lusha's V3 docs" field list (`id, linkedinUrl, email, firstName, lastName, companyName, companyDomain, has, canReveal`) is **wrong**, not just missing a title field as first suspected. Product Decisions found the real response is nested (`jobTitle.title`, `company.name`, `company.domain`, `socialLinks.linkedin`), and Search Contacts **never returns `email` at all** — that's an Enrich-only field. The spec is being corrected (Sections 3 and 6); as of this session's check, it had **not yet been updated in the repo**.
+
+**Why this matters:** building `lib/lusha-client.ts`'s response parsing against the old field list would guarantee rework the moment the real shape was confirmed. The email point is actually reassuring for the discovery-only scope decision (Section 1/5) — it means there was never a real risk of the Search Contacts call accidentally capturing contact info — but the field *names* still need correcting before any parsing code is written.
+
+**How to apply:** do not write `lib/lusha-client.ts` (or any code that parses a Lusha Search Contacts response) until `ai/LEAD_DISCOVERY_SPEC.md` Sections 3/6 are confirmed corrected in the repo — check directly (grep for `jobTitle` or similar), don't assume based on a prior conversation. Everything *not* dependent on the exact field shape (schema, RPC, TS wrapper taking already-normalized rows) can and should proceed in the meantime — see the Phase 2 write-back work logged in `ai/HANDOVER.md`.
+
+---
+
+## 2026-07-23 — Target-company list scoped to event_id, not campaign_id; "manager" maps to existing admin role
+
+**Decision:** Lead Discovery's manager-uploaded target-company list (`ai/LEAD_DISCOVERY_SPEC.md` Section 2, steps 2-4) is scoped to `event_id` via a new `event_target_companies` table, not to an individual `campaign_id`. "Manager" in the spec is treated as this app's existing `admin` role — no new role was introduced.
+
+**Why:** in this codebase a "campaign" is rep-scoped — `assignRepToEvent()` (`app/events/actions.ts`) auto-creates one separate `campaigns` row per rep per event, all sharing the same `event_id`. Scoping the target-company list to one `campaign_id` would mean a manager re-uploading and re-splitting the same ~300-company list once per rep working a shared event, which defeats the point of uploading it once and tagging ownership. Every other Lead-Discovery-adjacent entity in this codebase is already event-scoped (`prospect_contexts.event_id`), and there's no separate "manager" role anywhere in the existing RBAC model (`lib/require-admin.ts` only has `admin`/`staff`) — every comparable admin-adjacent write (Events Hub, Assign Reps, User Management) already uses `requireAdmin()`.
+
+**How to apply:** any future Lead Discovery feature that needs to know "which companies is this rep responsible for" should query `event_target_companies` joined through `event_target_company_reps` by `event_id` + `user_id`, not by `campaign_id`. If a genuine "manager" role distinct from admin is ever introduced, this decision (and every other admin-gated Lead Discovery write) would need revisiting — not just this one table.

@@ -30,6 +30,17 @@ export interface EventRep {
   campaign_id: string | null
 }
 
+// Lead Discovery Phase 3, part 1 — manager (admin) upload of an event's
+// target company list, tagged with which rep(s) own each company.
+export interface TargetCompany {
+  id: string
+  event_id: string
+  company_name: string
+  company_domain: string
+  created_at: string
+  ownerRepIds: string[]
+}
+
 export interface Event {
   id: string
   sf_identifier: string
@@ -572,4 +583,107 @@ export async function getEventById(eventId: string): Promise<{
     event:     { ...(event as Event), assignedReps },
     changelog,
   }
+}
+
+// ─── Target Companies (Lead Discovery Phase 3, part 1) ────────────────────────
+
+function normalizeDomain(domain: string): string {
+  return domain.trim().toLowerCase()
+}
+
+export async function getTargetCompanies(eventId: string): Promise<TargetCompany[]> {
+  await requireAuth()
+  const supabase = await createSupabaseServer()
+
+  const { data: companies } = await supabase
+    .from('event_target_companies')
+    .select('id, event_id, company_name, company_domain, created_at')
+    .eq('event_id', eventId)
+    .order('company_name', { ascending: true })
+
+  if (!companies || companies.length === 0) return []
+
+  const companyIds = companies.map(c => c.id)
+  const { data: reps } = await supabase
+    .from('event_target_company_reps')
+    .select('target_company_id, user_id')
+    .in('target_company_id', companyIds)
+
+  const ownersByCompany = new Map<string, string[]>()
+  for (const r of reps ?? []) {
+    const list = ownersByCompany.get(r.target_company_id) ?? []
+    list.push(r.user_id)
+    ownersByCompany.set(r.target_company_id, list)
+  }
+
+  return companies.map(c => ({
+    ...c,
+    ownerRepIds: ownersByCompany.get(c.id) ?? [],
+  }))
+}
+
+export async function uploadTargetCompanies(
+  eventId: string,
+  rows: Array<{ company_name: string; company_domain: string }>
+): Promise<{ upserted: number; error?: string }> {
+  await requireAdmin()
+  const userId = await requireAuth()
+  const supabase = await createSupabaseServer()
+
+  const cleanRows = rows
+    .map(r => ({
+      event_id: eventId,
+      company_name: r.company_name.trim(),
+      company_domain: normalizeDomain(r.company_domain),
+      created_by: userId,
+    }))
+    .filter(r => r.company_name && r.company_domain)
+
+  if (cleanRows.length === 0) return { upserted: 0, error: 'No valid rows to import.' }
+
+  // (event_id, company_domain) is a PLAIN unique index (015_event_target_companies.sql)
+  // — not partial like 009/012/011 — so a normal upsert can target it directly.
+  const { data, error } = await supabase
+    .from('event_target_companies')
+    .upsert(cleanRows, { onConflict: 'event_id,company_domain' })
+    .select('id')
+
+  if (error) return { upserted: 0, error: error.message }
+  return { upserted: (data ?? []).length }
+}
+
+export async function setCompanyReps(
+  targetCompanyId: string,
+  userIds: string[]
+): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin()
+  const supabase = await createSupabaseServer()
+
+  const { error: delError } = await supabase
+    .from('event_target_company_reps')
+    .delete()
+    .eq('target_company_id', targetCompanyId)
+  if (delError) return { ok: false, error: delError.message }
+
+  if (userIds.length === 0) return { ok: true }
+
+  const { error: insError } = await supabase
+    .from('event_target_company_reps')
+    .insert(userIds.map(user_id => ({ target_company_id: targetCompanyId, user_id })))
+  if (insError) return { ok: false, error: insError.message }
+
+  return { ok: true }
+}
+
+export async function removeTargetCompany(targetCompanyId: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin()
+  const supabase = await createSupabaseServer()
+
+  const { error } = await supabase
+    .from('event_target_companies')
+    .delete()
+    .eq('id', targetCompanyId)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }

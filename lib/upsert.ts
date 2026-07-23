@@ -21,10 +21,10 @@ export interface UpsertResult {
  * Each write path defines its own RPC (matching its own table's constraint) and
  * calls it through this same wrapper for a consistent shape and error handling.
  */
-export async function upsertViaRpc(
+export async function upsertViaRpc<T extends object>(
   supabase: SupabaseClient,
   rpcName: string,
-  rows: Record<string, unknown>[]
+  rows: T[]
 ): Promise<UpsertResult> {
   if (rows.length === 0) return { results: [] }
 
