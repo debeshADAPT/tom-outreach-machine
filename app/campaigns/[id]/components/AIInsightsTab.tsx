@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import type { Campaign, Prospect } from '@/lib/types'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { MockDataBanner } from '@/components/MockDataBadge'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface Props {
@@ -328,6 +329,11 @@ function AIInsightCards() {
 export default function AIInsightsTab({ campaign: _campaign, prospects: _prospects }: Props) {
   return (
     <div className="flex flex-col gap-5">
+      <MockDataBanner>
+        Real AI scoring is not connected yet. Top Matches, Industry Performance, Coverage
+        Insights, Top Performing Topics, and the AI Insight cards below are all illustrative
+        preview data, not live signal from your prospects.
+      </MockDataBanner>
       <div className="grid grid-cols-2 gap-4">
         <TopMatches />
         <IndustryPerformance />

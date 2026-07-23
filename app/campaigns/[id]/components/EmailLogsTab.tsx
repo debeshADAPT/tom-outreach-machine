@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import type { Campaign, Prospect } from '@/lib/types'
 import { STEPS } from '@/lib/sequence-steps'
+import { MockDataBanner, MockDataTag } from '@/components/MockDataBadge'
 
 interface Props {
   campaign: Campaign
@@ -232,7 +233,10 @@ function ExpandedEmailView({ log, repName }: { log: EmailLog; repName: string })
 
       {/* Footer */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '11px', color: '#9A9A9A' }}>Sent via SIGNAL · Microsoft Graph</span>
+        <span style={{ fontSize: '11px', color: '#9A9A9A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <MockDataTag />
+          Preview only — this email has not actually been sent
+        </span>
         <button
           onClick={e => { e.stopPropagation(); handleCopy() }}
           style={{
@@ -312,9 +316,14 @@ export default function EmailLogsTab({ campaign, prospects, repName }: Props) {
           Email Logs
         </h2>
         <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>
-          All emails sent in this campaign.
+          Preview of email activity for this campaign.
         </p>
       </div>
+
+      <MockDataBanner>
+        No email sending integration is connected yet. Everything below is illustrative preview
+        data — no email in this log has actually been sent.
+      </MockDataBanner>
 
       <input
         type="text"
@@ -337,7 +346,7 @@ export default function EmailLogsTab({ campaign, prospects, repName }: Props) {
           padding: '60px 24px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         }}>
           <p style={{ fontSize: '14px', color: '#6B7280' }}>
-            No emails have been sent in this campaign yet.
+            No preview email activity for this campaign yet.
           </p>
         </div>
       ) : sorted.length === 0 ? (

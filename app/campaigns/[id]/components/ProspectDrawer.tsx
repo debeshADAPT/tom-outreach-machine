@@ -6,6 +6,7 @@ import type { Prospect, Campaign } from '@/lib/types'
 import { STEPS, STEP_ORDER, STEP_DEPTH } from '@/lib/sequence-steps'
 import { calculateStepDates, formatDDMMYY } from '@/lib/utils'
 import { deleteProspect } from '../actions'
+import { MockDataTag } from '@/components/MockDataBadge'
 
 interface Props {
   prospect: Prospect
@@ -171,11 +172,13 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
               </div>
               <div style={{ marginTop: '8px' }}>
                 <span style={{
-                  display: 'inline-block', padding: '3px 10px', borderRadius: '20px',
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  padding: '3px 10px', borderRadius: '20px',
                   fontSize: '12px', fontWeight: '600',
                   backgroundColor: scoreStyle.bg, color: scoreStyle.color,
                 }}>
                   {score}% Match
+                  <MockDataTag style={{ backgroundColor: 'rgba(255,255,255,0.55)' }} />
                 </span>
               </div>
             </div>
@@ -367,6 +370,12 @@ export default function ProspectDrawer({ prospect, campaign, onClose, onStageCha
           {prospect.status === 'replied' ? (
             <>
               {/* MOCK DATA — replace with real Graph API reply content when integration is live */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <MockDataTag />
+                <span style={{ fontSize: '11px', color: '#9A9A9A' }}>
+                  Preview text — not an actual reply from this prospect
+                </span>
+              </div>
               <div style={{
                 backgroundColor: '#F7F6F3', border: '1px solid #E5E5E5',
                 borderRadius: '8px', padding: '12px 14px',

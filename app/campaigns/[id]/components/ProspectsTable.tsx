@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import type { Prospect } from '@/lib/types'
+import { MockDataTag } from '@/components/MockDataBadge'
 
 interface Props {
   prospects: Prospect[]
@@ -24,11 +25,13 @@ function MatchBadge({ score }: { score: number }) {
   else if (score >= 60) { bg = '#FFFBEB'; color = '#D97706' }
   return (
     <span style={{
-      display: 'inline-block', padding: '2px 8px', borderRadius: '2px',
+      display: 'inline-flex', alignItems: 'center', gap: '5px',
+      padding: '2px 8px', borderRadius: '2px',
       fontSize: '11px', fontWeight: '600', backgroundColor: bg, color,
       letterSpacing: '0.03em',
     }}>
       {score}%
+      <MockDataTag style={{ backgroundColor: 'rgba(255,255,255,0.55)' }} />
     </span>
   )
 }
