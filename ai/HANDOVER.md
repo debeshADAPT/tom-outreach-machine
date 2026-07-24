@@ -811,5 +811,90 @@ modified: ai/DECISIONS.md
 
 ---
 
+## Checkpoint: 2026-07-24 — no new work, pre-restart save point
+
+Session paused for a laptop restart. Nothing built or changed in this checkpoint — recording exact state so the next session (or a crash-recovered one) can pick up cleanly.
+
+**Repo state:** working tree clean except `ai/TASK_CURRENT.md` (empty, untracked, harmless — has been present and unused across multiple recent sessions). `main` is even with `origin/main` — nothing local, nothing unpushed. Last commit: `e02de55` ("feat: Lead Discovery Phase 3 (part 1) — event-scoped target company list").
+
+**What's live in Supabase as of this checkpoint:** migrations through `015_event_target_companies.sql`, all confirmed run and verified — `009`/`012` (prospect dedup, email + name-only), `011` (`company_prospect_pool`), `013` (`upsert_context_prospects` RPC), `014` (`upsert_company_prospect_pool` RPC), `015` (`event_target_companies` + `event_target_company_reps`). See the two sessions immediately above for how `014` and `015` were each verified end-to-end.
+
+**Still open, unchanged from the "Next Recommended Task" this checkpoint replaces:**
+- **`lib/lusha-client.ts` blocked** — `ai/LEAD_DISCOVERY_SPEC.md` Sections 3/6 still have the old, confirmed-wrong Lusha field list as of the last direct check. Verify again before assuming it's been corrected — don't rely on this checkpoint note alone once time has passed.
+- Once unblocked, Phase 3's rep-facing "Find new leads" flow (already-in-list/new split, promote/discard) can build on `014`'s pool and `015`'s target-company/rep-ownership data together.
+- Per the 2026-07-23 audit's prioritized list (`ai/AUDIT_FINDINGS.md`), the stuck-`pending` staleness check for `brief_status`/`intelligence_status` (item #3) is still open.
+- Email sending via Graph API remains blocked on Azure App Registration approval (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`).
+
+---
+
+## Session: 2026-07-24 — `lib/lusha-client.ts` attempt paused: API key returns 0 results on real domains
+
+### What happened
+
+`ai/LEAD_DISCOVERY_SPEC.md` Sections 3/6's field-schema correction was confirmed already applied to the repo this session (nested `V3ContactPreview` shape, no `email` at discovery — see `ai/DECISIONS.md`), so `lib/lusha-client.ts` build work started. `LUSHA_API_KEY` was added to `.env.local` for the first time this session.
+
+Before writing the client's request-mapping code, the actual Lusha Prospecting Search API contract was checked against a live call (docs.lusha.com is JS-rendered and unreadable via automated fetch, so this was verified directly against the API instead of guessed):
+
+- **Endpoint confirmed:** `POST https://api.lusha.com/prospecting/contact/search`, auth via `api_key` header.
+- **Request shape confirmed correct per Lusha's own docs** (cross-checked via search-indexed doc snippets): `filters.companies.include.domains: [domain]`, `pages: { page, size }` with `size` minimum 10.
+- **Problem found:** every successful (2xx) call — contact search by domain, company search by domain, company search by company name "Microsoft" — returned `totalResults: 0, data: [], billing.creditsCharged: 0`, including for `microsoft.com`, a domain far too large to plausibly have zero prospecting matches. This is not a request-shape bug (the shape is accepted and confirmed correct); it points to the API key/contract not being entitled for prospecting search server-side access — exactly the open item already flagged in spec Section 6 ("confirm whether the existing Lusha contract/account supports server-side API key access... may need to be provisioned or confirmed with Lusha/IT before build starts").
+
+**Paused here per the user's direction:** this is an account/entitlement question for Lusha/IT to resolve, not something resolvable by further guessing at request shapes. No further live calls were made once this was identified.
+
+### Status
+
+`lib/lusha-client.ts` is **not written** — paused before any client code was committed, since building parsing/mapping logic against an unverified-working key would risk the same rework problem the earlier field-schema blocker caused. The debug test script used to probe the API (`scripts/lusha-test.mjs`) was deleted; nothing from this session is committed.
+
+**Blocking Phase 2 completion:** need confirmation from Lusha/IT that this API key (or a replacement) has prospecting search access enabled for server-side use, before `lib/lusha-client.ts` can be built and verified end-to-end (field mapping, staleness check, write-back) as the task brief requires.
+
+### Files touched
+None (test script created and removed within this session; no committed changes).
+
+---
+
+## Session: 2026-07-24 — `lib/lusha-client.ts` built and verified — Lead Discovery Phase 2 complete
+
+### What changed
+
+The previous session's "entitlement" theory was wrong. Root cause of the earlier 0-result problem: the endpoint called (`/prospecting/contact/search`) was simply the wrong one — it silently accepted requests and returned zero results instead of erroring. The correct V3 endpoint is **`POST /v3/contacts/prospecting`**, confirmed via Lusha's docs (fetched as raw markdown — the rendered page is JS-only and unreadable directly) and then verified live. Full details of every shape correction (nested `pagination`, required non-empty filters, the full seniority-ID enum used to make the required contact filter a no-op, response key `results` not `data`, `location` object) are in `ai/DECISIONS.md`'s matching entry — not repeated here.
+
+**`lib/lusha-client.ts`** (new): `discoverCompanyContacts(supabase, companyDomain, options?)` —
+1. Checks `company_prospect_pool` for the domain's freshest `last_found_at`; if <60 days old (spec Section 3), returns cached rows with no Lusha call.
+2. If stale/absent, calls `POST /v3/contacts/prospecting` with the domain filter and the full seniority-ID enum (a required, deliberately non-narrowing filter — see `ai/DECISIONS.md`).
+3. Maps each result to the pool's flat schema — `full_name`, `title`, `company_name`, `linkedin_url`, `location`; `has_contact_info` always `false` and no `email`/phone field ever touched, per the field-schema correction.
+4. Writes via the existing `writeToProspectPool` → `upsertViaRpc('upsert_company_prospect_pool', ...)` path (never a plain insert).
+5. Reads back and returns the written rows, plus `source: 'lusha' | 'cache'` and `totalFound`.
+
+Throws (does not silently return empty) on missing `LUSHA_API_KEY`, any non-2xx Lusha response, or any Supabase error — callers can't mistake a real failure for "no contacts found."
+
+**New migration** (`supabase/migrations/016_company_prospect_pool_location.sql` — **written and run this session**): adds `company_prospect_pool.location jsonb` and re-creates the `014` upsert RPC to also write it. Spec addition (Lusha's response includes per-contact location, not in the original Section 6 field list, captured now since it's free at discovery time) — not a scope deviation, logged in `ai/DECISIONS.md`.
+
+**Types**: `lib/types.ts` gained `CompanyProspectPoolRow` (the full DB row shape, for reads); `lib/prospect-pool.ts`'s `ProspectPoolRow` (write-input shape) gained an optional `location` field.
+
+### Verification
+
+Tested against real Lusha credentials via a temporary Next.js route handler (`app/api/lusha-test/route.ts`, deleted after use — not committed, kept the diff to only the four files below):
+- First call (`adapt.com.au`, page size 10) hit Lusha live, correctly mapped and wrote 10 real ADAPT contacts to `company_prospect_pool` (spot-checked via the route's JSON response) — no `email`/phone field present anywhere, `location` populated, `has_contact_info: false` on every row.
+- Second call, same domain, returned `source: "cache"` with `totalFound: null` — confirmed the staleness check skips a second live Lusha call within the 60-day window, no additional credits spent.
+- Total session credit spend: 2/100 (per the user's own Lusha dashboard) — for the one real 10-result search call.
+- **The real ADAPT rows written during verification were kept** (user's explicit choice) rather than deleted — legitimate discovery-stage data for ADAPT's own domain, not synthetic test rows.
+
+### Files touched
+```
+new:      lib/lusha-client.ts
+new:      supabase/migrations/016_company_prospect_pool_location.sql
+modified: lib/types.ts
+modified: lib/prospect-pool.ts
+modified: ai/DECISIONS.md
+```
+
+### Current status
+
+`npx tsc --noEmit` clean. Migration 016 confirmed run. Not yet committed.
+
+**Lead Discovery Phase 2 (Lusha client + pool write-back) is now fully complete.**
+
+---
+
 ## Next Recommended Task
-Both 014 and 015 are now built, migrated, and verified end-to-end — Lead Discovery's write-back foundation (pool) and target-company scoping are solid. Lead Discovery Phase 2 proper (`lib/lusha-client.ts`) remains blocked until the corrected spec (Sections 3/6) is shared — check directly before assuming it's resolved. Once unblocked, Phase 3's rep-facing "Find new leads" flow (already-in-list/new split, promote/discard) can build on both 014's pool and 015's target-company/rep-ownership data together. Separately, per the 2026-07-23 audit's prioritized list (`ai/AUDIT_FINDINGS.md`), the stuck-`pending` staleness check for `brief_status`/`intelligence_status` (item #3) is still open. Email sending via Graph API remains blocked on Azure App Registration approval (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`).
+Lead Discovery Phase 3, part 2: the rep-facing "Find new leads" UI — wire `discoverCompanyContacts` to a button scoped to one of the rep's owned companies (from `event_target_companies`/`event_target_company_reps`, Phase 3 part 1), split results into "Already in your list" vs. "New" per the matching hierarchy (spec Section 4.1/4.2), and build promote/discard actions (spec Section 2, steps 6-8). Until that's picked up, the stuck-`pending` staleness check (audit item #3) is available work that doesn't depend on Lead Discovery.

@@ -42,6 +42,7 @@ Reps currently spend 3-4 hours a day manually searching Sales Navigator to find 
 **Behavior:**
 - Keyed by **normalized company domain** (not company name — "Caltyx" vs "Caltyx Inc" must resolve to the same key).
 - Stores: name, title, company/domain, LinkedIn URL, source (`lusha` / `csv_salesforce` / `manual`), contact-info-present flag, "last found on" timestamp, and event-type fit tag(s) if applicable.
+- **Note:** the contact-info-present flag is never set at discovery time — Lusha's Search Contacts response contains no email/phone data by design (Section 6). This flag starts false/absent for every discovery-sourced entry and is only flipped to true during CSV/SF reconciliation (Section 4.3, step 5), once a rep has actually enriched and re-uploaded the contact.
 - **No contact enrichment data is ever stored here** — consistent with SIGNAL's discovery-only scope. Only Search Contacts (discovery) is called; Lusha's enrichment/reveal step is never called from SIGNAL, and remains a manual, rep-driven action via the Chrome extension as today.
 - **Staleness window:** entries older than 60 days (finalized product decision, confirmed 2026-07-23) are treated as stale. A rep search against a stale entry triggers a fresh Lusha Search Contacts call rather than trusting cached data.
 - **No merge/acquisition detection, no job-change detection.** The pool is a search cache with a shelf life, not a system of record. Drift (person left the company, companies merged) self-corrects the next time someone searches that domain — old entries simply get superseded by fresh results. This is a deliberate scope cut; do not build detection logic for this.
@@ -92,7 +93,15 @@ SIGNAL's existing prospect dedup (unique index on `email, assigned_to` where `ca
 ## 6. Open items / dependencies to confirm before or during build
 
 - **Lusha API credentials for server-side use.** Confirm whether the existing Lusha contract/account supports server-side API key access (distinct from the Chrome-extension login used today) — this may need to be provisioned or confirmed with Lusha/IT before build starts.
-- **Confirmed via Lusha's V3 docs (2026-07-23):** Search Contacts returns `id`, `linkedinUrl`, `email`, `firstName`, `lastName`, `companyName`, `companyDomain`, `has`, `canReveal`. Only Search Contacts (discovery) should be called from SIGNAL — do not call Lusha's enrichment/reveal endpoints from the backend, per the discovery-only scope decision.
+- **Confirmed via Lusha's V3 docs (2026-07-23, corrected 2026-07-23):** Search Contacts returns a `V3ContactPreview` object shaped as follows — this is a **non-PII preview only**, per Lusha's own docs ('no emails or phone numbers'):
+  - `id`, `firstName`, `lastName` — flat
+  - `jobTitle.title`, `jobTitle.departments`, `jobTitle.seniority` — nested
+  - `company.name`, `company.domain`, `company.id` — nested
+  - `socialLinks.linkedin` — LinkedIn URL, **nested, not a flat `linkedinUrl` field**
+  - `has` — array of strings indicating which fields are populated on this result
+  - `canReveal` — array of `{field: 'emails'|'phones', credits: number}` indicating what's unlockable via a separate, paid Enrich call
+  - **`email` is not returned by Search Contacts at all.** It is only available via Lusha's Enrich endpoint, which SIGNAL must never call server-side per the discovery-only scope decision (Section 5). Field-mapping code must not assume an email or 'has email' boolean is available at discovery time.
+  - Only Search Contacts (discovery) should be called from SIGNAL — do not call Lusha's enrichment/reveal endpoints from the backend, per the discovery-only scope decision.
 - **Rate limits confirmed sufficient:** Scale-tier plan supports 600 requests/minute, 5,000/hour, 50,000/day — not expected to constrain usage at 6-7 reps × ~300 companies per campaign.
 - **Staleness window duration — finalized at 60 days** (confirmed via product decision, 2026-07-23). No longer an open item.
 - **Prospect dedup migration status** — confirm the existing unique index migration has actually run in production before layering more write paths on top of it (per Section 4.5).

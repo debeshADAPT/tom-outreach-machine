@@ -57,3 +57,19 @@ export interface Profile {
   role: 'admin' | 'staff'
   display_name: string | null
 }
+
+export interface CompanyProspectPoolRow {
+  id: string
+  company_domain: string
+  full_name: string | null
+  title: string | null
+  company_name: string | null
+  linkedin_url: string | null
+  source: 'lusha' | 'csv_salesforce' | 'manual'
+  has_contact_info: boolean
+  last_found_at: string
+  event_type_fit: string[]
+  location: { country?: string; city?: string; state?: string } | null
+  created_at: string
+  updated_at: string
+}

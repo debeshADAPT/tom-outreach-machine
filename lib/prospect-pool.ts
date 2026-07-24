@@ -10,6 +10,7 @@ export interface ProspectPoolRow {
   source: 'lusha' | 'csv_salesforce' | 'manual'
   has_contact_info: boolean
   event_type_fit?: string[]
+  location?: { country?: string; city?: string; state?: string } | null
 }
 
 /**
