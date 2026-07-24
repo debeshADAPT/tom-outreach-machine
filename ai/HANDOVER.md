@@ -890,11 +890,35 @@ modified: ai/DECISIONS.md
 
 ### Current status
 
-`npx tsc --noEmit` clean. Migration 016 confirmed run. Not yet committed.
+`npx tsc --noEmit` clean. Migration 016 confirmed run. Committed and pushed as `de8f8c4` ("feat: Lead Discovery Phase 2 — Lusha Search Contacts client + pool write-back").
 
 **Lead Discovery Phase 2 (Lusha client + pool write-back) is now fully complete.**
 
 ---
 
+---
+
+## Checkpoint: 2026-07-24 — Lead Discovery status summary, session break
+
+No new work in this checkpoint — consolidating current status across all four Lead Discovery phases before a session break, so the next session (or a crash-recovered one) doesn't have to reconstruct it from scattered session entries above.
+
+**Latest commit:** `de8f8c4` ("feat: Lead Discovery Phase 2 — Lusha Search Contacts client + pool write-back"). **Confirmed pushed** — `git log origin/main` matches local `HEAD` exactly (`de8f8c4`), verified via `git fetch origin` this session. Working tree clean except `ai/TASK_CURRENT.md` (empty, untracked, harmless — present and unused across multiple recent sessions, same as noted in the 2026-07-24 pre-restart checkpoint above).
+
+**Lead Discovery phase status:**
+- **Phase 1 — schema + upsert pattern: DONE.** Migrations `011`-`013`. `company_prospect_pool` schema (011), name-based dedup gap closed (012), RPC-based atomic upsert (013) — Supabase's built-in `.upsert()` can't target the partial unique indexes this table needs (`ai/DECISIONS.md`, 2026-07-23).
+- **Phase 2 — Lusha client + pool write-back: DONE.** `lib/lusha-client.ts` (`discoverCompanyContacts`): 60-day staleness check against `company_prospect_pool`; if stale, calls `POST /v3/contacts/prospecting` live; maps the nested response (`jobTitle.title`/`seniority`, `company.name`/`domain`, `socialLinks.linkedin`, `location`) to the pool's flat schema; writes via the existing `upsertViaRpc` path. Migration `016` added `location jsonb` (a real spec addition — the data is free from the API response, capturing it now rather than having to re-query later). No email/phone is ever captured — Lusha's Prospecting endpoint doesn't return them; that data only exists behind the Enrich endpoint, which SIGNAL must never call server-side (spec Section 5).
+  - **Root-cause note for history:** earlier sessions hit what looked like a Lusha account/entitlement problem — real calls against real domains (including `microsoft.com`) returned 0 results and 0 credits charged. The actual root cause was a **wrong endpoint** (`/prospecting/contact/search`, which isn't a valid V3 path) silently accepting requests instead of erroring. The correct endpoint, confirmed via live docs and test calls, is `POST /v3/contacts/prospecting`. There was never an entitlement issue.
+  - **Verified end-to-end:** a real call against `adapt.com.au` returned real ADAPT contacts (2/100 credits charged per the user's own Lusha dashboard); a second call against the same domain served from cache with no additional Lusha call/credits. The real ADAPT rows written during verification were **intentionally kept** in `company_prospect_pool` (user's explicit choice) — legitimate data, not test residue; deleting them would just force a wasteful re-fetch later.
+- **Phase 3, part 1 — event-scoped target-company upload: DONE.** Migration `015` (`event_target_companies` + `event_target_company_reps` junction), manager-facing CSV upload with per-company rep tagging, in the Event Detail page.
+- **Phase 3, part 2 — rep-facing "Find new leads" UI: NOT STARTED.** Now fully unblocked — the Lusha client exists and is verified working. Covers spec Section 2, steps 4-9: a search button scoped to one of the rep's owned companies (via `event_target_companies`/`event_target_company_reps`), split into "Already in your list" vs. "New" using the matching hierarchy (Section 4.1/4.2), promote/discard actions, and the cross-rep passive pursuit flag.
+- **Phase 4 — CSV reconciliation logic: NOT STARTED.** Covers spec Section 4.3-4.5: LinkedIn-URL auto-merge on CSV upload, name+company fallback match requiring explicit rep confirmation via side-by-side comparison (never auto-merge), ambiguous-match escalation to manager/admin, and updating the pool's `has_contact_info` flag on successful merge.
+
+**Other open items, unrelated to Lead Discovery (unchanged, still standing):**
+- The 2026-07-23 mock-data UI disclosure fix (`EmailLogsTab`, match-score badges, `AIInsightsTab`) is **done and committed** — confirmed correctly reflected in this file's 2026-07-23 session entry and not re-flagged as open anywhere later in this file. Note this fixed *disclosure* only — the underlying data (AI scoring, email sending) is still genuinely mocked/unimplemented, which is why those items correctly remain listed separately under "Unresolved Issues" above.
+- Per `ai/AUDIT_FINDINGS.md`'s prioritized list: the stuck-`pending` staleness check for `brief_status`/`intelligence_status` (items #1/#2) is still open — no cron/sweeper exists to detect or recover a row stuck in `'pending'` from a hard-killed process. Lower priority than Lead Discovery per the user's stated build-order preference.
+- Dead code / orphaned-action cleanup (`lib/supabase.js`, unused sequence-start actions) — still open, low priority.
+
+---
+
 ## Next Recommended Task
-Lead Discovery Phase 3, part 2: the rep-facing "Find new leads" UI — wire `discoverCompanyContacts` to a button scoped to one of the rep's owned companies (from `event_target_companies`/`event_target_company_reps`, Phase 3 part 1), split results into "Already in your list" vs. "New" per the matching hierarchy (spec Section 4.1/4.2), and build promote/discard actions (spec Section 2, steps 6-8). Until that's picked up, the stuck-`pending` staleness check (audit item #3) is available work that doesn't depend on Lead Discovery.
+Lead Discovery Phase 3, part 2 (the rep-facing "Find new leads" UI) is the immediate next build — see the checkpoint above for full scope. Phase 4 (CSV reconciliation logic) is the task after that, and should follow directly once Phase 3 part 2 lands, since promotion (Phase 3) and CSV reconciliation (Phase 4) both write into the same `prospects`/pool surfaces and are easiest to reason about back-to-back. Until either is picked up, the stuck-`pending` staleness check (audit items #1/#2) is available work that doesn't depend on Lead Discovery.
